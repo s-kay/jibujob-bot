@@ -1,116 +1,100 @@
 import os
-from fastapi import FastAPI, Request
 import httpx
-from typing import Dict
+from fastapi import FastAPI, Request
 
 app = FastAPI()
 
-# Load sensitive values from environment variables
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "test_verify_token")
-ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "testtoken")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-
-# WhatsApp Graph API base
-def get_whatsapp_url() -> str:
-    if not PHONE_NUMBER_ID:
-        raise ValueError("❌ PHONE_NUMBER_ID is not set in environment variables.")
-    return f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
-
-# Mock datasets
-jobs_dataset = [
-    {"title": "Software Engineer", "company": "Andela", "location": "Nairobi", "link": "https://andela.com/careers"},
-    {"title": "Cloud Engineer", "company": "Microsoft", "location": "Remote", "link": "https://careers.microsoft.com"},
-    {"title": "Data Analyst", "company": "Safaricom", "location": "Nairobi", "link": "https://safaricom.co.ke/careers"},
-]
-
-training_links = [
-    "👉 Digital Skills: https://learndigital.withgoogle.com/digitalskills",
-    "👉 Microsoft Learn: https://learn.microsoft.com/training",
-    "👉 Coursera Africa: https://www.coursera.org",
-]
-
-mentors = [
-    "🌟 Lucy — Tech Career Coach",
-    "🌟 Brian — Cloud Architect Mentor",
-    "🌟 Anita — Data Science Guide",
-]
-
-# Function to send messages
-async def send_whatsapp_message(to: str, message: str) -> None:
-    if not ACCESS_TOKEN:
-        print("❌ ACCESS_TOKEN is missing. Set WHATSAPP_ACCESS_TOKEN in environment.")
-        return
-
-    try:
-        url = get_whatsapp_url()
-        headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload: Dict = {
-            "messaging_product": "whatsapp",
-            "to": to,
-            "type": "text",
-            "text": {"body": message}
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload)
-            if response.status_code != 200:
-                print(f"❌ Error sending message: {response.text}")
-            else:
-                print(f"✅ Message sent: {response.text}")
-    except Exception as e:
-        print(f"🔥 Exception while sending message: {e}")
-
-# Webhook verification
-@app.get("/webhook")
-async def verify_webhook(request: Request):
-    params = request.query_params
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
-        return int(params.get("hub.challenge", 0))
-    return {"error": "Invalid verification token"}
-
-# Webhook receiver
-@app.post("/webhook")
-async def whatsapp_webhook(request: Request):
-    data = await request.json()
-    try:
-        entry = data["entry"][0]
-        changes = entry["changes"][0]
-        value = changes["value"]
-        messages = value.get("messages")
-
-        if messages:
-            msg = messages[0]
-            sender = msg["from"]
-            text = msg.get("text", {}).get("body", "").strip()
-
-            if text == "1":
-                jobs_text = "📌 Sample Job Listings:\n"
-                for job in jobs_dataset:
-                    jobs_text += f"- {job['title']} at {job['company']} ({job['location']})\nApply: {job['link']}\n\n"
-                await send_whatsapp_message(sender, jobs_text.strip())
-
-            elif text == "2":
-                training_text = "📚 Training Resources:\n" + "\n".join(training_links)
-                await send_whatsapp_message(sender, training_text)
-
-            elif text == "3":
-                mentors_text = "🤝 Meet our Mentors:\n" + "\n".join(mentors)
-                await send_whatsapp_message(sender, mentors_text)
-
-            else:
-                welcome = (
-                    "👋 Welcome to JibuJob!\nReply with:\n"
-                    "1️⃣ Jobs\n2️⃣ Training\n3️⃣ Mentor"
-                )
-                await send_whatsapp_message(sender, welcome)
-    except Exception as e:
-        print(f"⚠️ Webhook handling error: {e}")
-
-    return {"status": "ok"}
+BASE_URL = "https://graph.facebook.com/v22.0"
 
 @app.get("/")
 async def root():
-    return {"message": "JibuJob Bot API is running 🚀"}
+    return {"message": "JibuJob Bot API is running 🚀 (Day 3)"}
+
+# ✅ Webhook verification (Meta calls this once)
+@app.get("/webhook")
+async def verify(request: Request):
+    params = dict(request.query_params)
+    if (
+        params.get("hub.mode") == "subscribe"
+        and params.get("hub.verify_token") == VERIFY_TOKEN
+    ):
+        return int(params.get("hub.challenge","0"))
+    return {"error": "Verification failed"}
+
+# ✅ Handle incoming messages
+@app.post("/webhook")
+async def webhook(request: Request):
+    body = await request.json()
+    try:
+        entry = body["entry"][0]
+        changes = entry["changes"][0]
+        messages = changes["value"].get("messages")
+
+        if messages:
+            msg = messages[0]
+            from_number = msg["from"]
+            text = msg.get("text", {}).get("body", "").strip()
+
+            # ✅ Menu logic
+            if text == "1":
+                reply = (
+                    "📋 *Sample Job Listings:*\n"
+                    "- Software Developer at Nairobi Tech\n"
+                    "- Sales Associate at Mombasa Retail Ltd\n"
+                    "- Data Analyst (Remote) at Africa DataHub\n\n"
+                    "👉 Reply with the job title for more details."
+                )
+            elif text == "2":
+                reply = (
+                    "📚 *Training Opportunities:*\n"
+                    "- Free Azure Fundamentals Course: https://learn.microsoft.com/en-us/training/azure\n"
+                    "- Digital Marketing Basics: https://learndigital.withgoogle.com\n"
+                    "- Data Science for Beginners: https://www.kaggle.com/learn\n\n"
+                    "👉 Pick one to explore!"
+                )
+            elif text == "3":
+                reply = (
+                    "🤝 *Mentor Introductions:*\n"
+                    "- Lucy (Tech Career Coach)\n"
+                    "- Peter (Entrepreneurship Mentor)\n"
+                    "- Amina (CV & Interview Prep)\n\n"
+                    "👉 Reply with a mentor’s name to connect."
+                )
+            else:
+                reply = (
+                    "👋 Welcome to JibuJob! Reply with:\n"
+                    "1️⃣ Jobs\n"
+                    "2️⃣ Training\n"
+                    "3️⃣ Mentor"
+                )
+
+            await send_message(from_number, reply)
+
+    except Exception as e:
+        print("❌ Error handling message:", e)
+
+    return {"status": "ok"}
+
+# ✅ Send a WhatsApp message via Cloud API
+async def send_message(to: str, message: str):
+    url = f"{BASE_URL}/{PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "text",
+        "text": {"body": message}
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            print("❌ Error sending message:", response.text)
+        else:
+            print("✅ Sent:", message)
