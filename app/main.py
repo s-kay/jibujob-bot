@@ -1,36 +1,36 @@
 import os
+import requests
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-import httpx   # ✅ make sure httpx is imported
+import httpx
 
 app = FastAPI()
 
-# Environment variables
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "testtoken")
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-
-# ✅ BASE_URL definition
-BASE_URL = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
-
-
 @app.get("/")
-async def root():
+def read_root():
     return {"message": "JibuJob Bot API is running 🚀"}
 
+# --- Environment variables ---
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob-verify")
+GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v22.0")
 
+WHATSAPP_API_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{WHATSAPP_PHONE_ID}/messages"
+
+
+# --- Verify webhook setup ---
 @app.get("/webhook")
-async def verify_webhook(request: Request):
-    """Webhook verification endpoint for WhatsApp Cloud API"""
+async def verify(request: Request):
     params = request.query_params
     if (
         params.get("hub.mode") == "subscribe"
         and params.get("hub.verify_token") == VERIFY_TOKEN
     ):
-        return int(params.get("hub.challenge","0"))
-    return JSONResponse(content={"error": "Invalid verification"}, status_code=403)
+        return int(params.get("hub.challenge", 0))
+    return "Verification failed"
 
 
+# --- Handle incoming messages ---
 @app.post("/webhook")
 async def webhook(request: Request):
     """Handles incoming WhatsApp messages"""
@@ -46,7 +46,7 @@ async def webhook(request: Request):
             sender = message["from"]
             text = message.get("text", {}).get("body", "").strip()
 
-            # ✅ Simple menu logic
+            # Basic menu logic
             if text in ["1", "Jobs", "jobs"]:
                 reply = "🔎 Great! Send me a job title (e.g., 'Accountant') and I’ll search for opportunities."
             elif text in ["2", "Training", "training"]:
@@ -82,7 +82,7 @@ async def send_message(recipient: str, message: str):
         "text": {"body": message},
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(BASE_URL, headers=headers, json=payload)
+        response = await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
         print("Send message response:", response.status_code, response.text)
 
 
