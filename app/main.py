@@ -44,7 +44,7 @@ def format_jobs() -> str:
 
 # ✅ Helper to send WhatsApp message
 def send_message(to: str, text: str):
-    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
+    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json",
