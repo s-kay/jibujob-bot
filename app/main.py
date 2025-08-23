@@ -9,16 +9,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
-WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "testtoken")
-GRAPH_API_VERSION = "v22.0"
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob-verify")
+GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v22.0")
 
 # Fail fast if critical ENV vars are missing
 if not WHATSAPP_TOKEN:
-    raise RuntimeError("❌ Missing WHATSAPP_ACCESS_TOKEN in environment.")
+    raise RuntimeError("❌ Missing WHATSAPP_TOKEN in environment.")
 if not WHATSAPP_PHONE_ID:
-    raise RuntimeError("❌ Missing WHATSAPP_PHONE_NUMBER_ID in environment.")
+    raise RuntimeError("❌ Missing WHATSAPP_PHONE_ID in environment.")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
