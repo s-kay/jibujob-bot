@@ -1,139 +1,116 @@
 import os
-import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+import httpx
+from typing import Dict
 
 app = FastAPI()
 
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "testtoken")
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+# Load sensitive values from environment variables
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "test_verify_token")
+ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
-BASE_URL = "https://graph.facebook.com/v22.0"
 
-# ✅ Mock job dataset
-JOB_LISTINGS = {
-    "Tech": [
-        "Software Engineer (Remote, Kenya) – Ksh 150k/month",
-        "Junior Data Analyst (Nairobi, Hybrid) – Ksh 80k/month",
-        "Cloud Support Associate (Remote, Africa-wide) – Ksh 100k/month",
-    ],
-    "Business & Sales": [
-        "Sales Associate (Mombasa, In-office) – Commission-based",
-        "Marketing Intern (Nairobi, Hybrid) – Stipend + allowance",
-        "Customer Success Officer (Kisumu, Remote possible) – Ksh 60k/month",
-    ],
-    "Skilled Trades": [
-        "Electrician Apprentice (Nakuru, In-office) – Ksh 40k/month",
-        "Plumbing Technician (Eldoret, In-office) – Ksh 45k/month",
-    ],
-    "Creative & Media": [
-        "Graphic Designer (Remote) – Freelance, project-based",
-        "Content Creator (Nairobi, Hybrid) – Ksh 70k/month",
-    ],
-}
+# WhatsApp Graph API base
+def get_whatsapp_url() -> str:
+    if not PHONE_NUMBER_ID:
+        raise ValueError("❌ PHONE_NUMBER_ID is not set in environment variables.")
+    return f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
 
-# ✅ Helper to format jobs
-def format_jobs() -> str:
-    text = "📋 *Sample Job Listings* 📋\n\n"
-    for category, jobs in JOB_LISTINGS.items():
-        text += f"🔹 *{category}*\n"
-        for job in jobs:
-            text += f"- {job}\n"
-        text += "\n"
-    text += "👉 Reply with the job title you're interested in to learn more."
-    return text.strip()
+# Mock datasets
+jobs_dataset = [
+    {"title": "Software Engineer", "company": "Andela", "location": "Nairobi", "link": "https://andela.com/careers"},
+    {"title": "Cloud Engineer", "company": "Microsoft", "location": "Remote", "link": "https://careers.microsoft.com"},
+    {"title": "Data Analyst", "company": "Safaricom", "location": "Nairobi", "link": "https://safaricom.co.ke/careers"},
+]
 
-# ✅ Helper to send WhatsApp message
-def send_message(to: str, text: str):
-    url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to,
-        "type": "text",
-        "text": {"body": text},
-    }
+training_links = [
+    "👉 Digital Skills: https://learndigital.withgoogle.com/digitalskills",
+    "👉 Microsoft Learn: https://learn.microsoft.com/training",
+    "👉 Coursera Africa: https://www.coursera.org",
+]
+
+mentors = [
+    "🌟 Lucy — Tech Career Coach",
+    "🌟 Brian — Cloud Architect Mentor",
+    "🌟 Anita — Data Science Guide",
+]
+
+# Function to send messages
+async def send_whatsapp_message(to: str, message: str) -> None:
+    if not ACCESS_TOKEN:
+        print("❌ ACCESS_TOKEN is missing. Set WHATSAPP_ACCESS_TOKEN in environment.")
+        return
 
     try:
-        resp = httpx.post(url, headers=headers, json=payload)
-        print("📤 WhatsApp API response:", resp.status_code, resp.text)
-        resp.raise_for_status()
+        url = get_whatsapp_url()
+        headers = {
+            "Authorization": f"Bearer {ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload: Dict = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "text",
+            "text": {"body": message}
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload)
+            if response.status_code != 200:
+                print(f"❌ Error sending message: {response.text}")
+            else:
+                print(f"✅ Message sent: {response.text}")
     except Exception as e:
-        print("❌ Error sending message:", e)
+        print(f"🔥 Exception while sending message: {e}")
 
-# ✅ Root endpoint
-@app.get("/")
-async def root():
-    return {"status": "JibuJob bot running ✅"}
-
-# ✅ Webhook verification
+# Webhook verification
 @app.get("/webhook")
 async def verify_webhook(request: Request):
     params = request.query_params
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == "my_verify_token":
-        return JSONResponse(content=int(params.get("hub.challenge","0")))
-    return JSONResponse(content="Invalid verification token", status_code=403)
+    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
+        return int(params.get("hub.challenge", 0))
+    return {"error": "Invalid verification token"}
 
-# ✅ Webhook receiver
+# Webhook receiver
 @app.post("/webhook")
-async def webhook_handler(request: Request):
+async def whatsapp_webhook(request: Request):
     data = await request.json()
-    print("📩 Incoming payload:", data)  # Debug
-
     try:
         entry = data["entry"][0]
         changes = entry["changes"][0]
-        value = changes.get("value", {})
-        messages = value.get("messages", [])
+        value = changes["value"]
+        messages = value.get("messages")
 
-        if not messages:
-            print("⚠️ No messages found in payload.")
-            return {"status": "no messages"}
+        if messages:
+            msg = messages[0]
+            sender = msg["from"]
+            text = msg.get("text", {}).get("body", "").strip()
 
-        msg = messages[0]
-        from_number = msg.get("from")
-        text = ""
+            if text == "1":
+                jobs_text = "📌 Sample Job Listings:\n"
+                for job in jobs_dataset:
+                    jobs_text += f"- {job['title']} at {job['company']} ({job['location']})\nApply: {job['link']}\n\n"
+                await send_whatsapp_message(sender, jobs_text.strip())
 
-        if msg.get("type") == "text":
-            text = msg["text"].get("body", "").strip()
+            elif text == "2":
+                training_text = "📚 Training Resources:\n" + "\n".join(training_links)
+                await send_whatsapp_message(sender, training_text)
 
-        print("📩 Extracted text:", text)
+            elif text == "3":
+                mentors_text = "🤝 Meet our Mentors:\n" + "\n".join(mentors)
+                await send_whatsapp_message(sender, mentors_text)
 
-        # ✅ Menu logic
-        if text == "1":
-            reply = format_jobs()
-        elif text == "2":
-            reply = (
-                "📚 *Training Resources*\n\n"
-                "- Coursera: https://www.coursera.org\n"
-                "- Udemy: https://www.udemy.com\n"
-                "- LinkedIn Learning: https://www.linkedin.com/learning\n"
-            )
-        elif text == "3":
-            reply = (
-                "🤝 *Mentorship Matching*\n\n"
-                "Please reply with your field of interest:\n"
-                "- Tech\n"
-                "- Business\n"
-                "- Creative\n"
-                "- Skilled Trades"
-            )
-        else:
-            reply = (
-                "👋 Welcome to JibuJob!\n"
-                "Please choose an option:\n"
-                "1️⃣ Sample Job Listings\n"
-                "2️⃣ Training Links\n"
-                "3️⃣ Mentor Introductions"
-            )
-
-        if from_number:
-            send_message(from_number, reply)
-
+            else:
+                welcome = (
+                    "👋 Welcome to JibuJob!\nReply with:\n"
+                    "1️⃣ Jobs\n2️⃣ Training\n3️⃣ Mentor"
+                )
+                await send_whatsapp_message(sender, welcome)
     except Exception as e:
-        print("❌ Error in webhook_handler:", e)
+        print(f"⚠️ Webhook handling error: {e}")
 
     return {"status": "ok"}
+
+@app.get("/")
+async def root():
+    return {"message": "JibuJob Bot API is running 🚀"}
