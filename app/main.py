@@ -1,6 +1,7 @@
 import os
 import requests
 from fastapi import FastAPI, Request
+import httpx 
 
 app = FastAPI()
 
@@ -32,64 +33,64 @@ async def verify(request: Request):
 # --- Handle incoming messages ---
 @app.post("/webhook")
 async def webhook(request: Request):
+    """Handles incoming WhatsApp messages"""
     data = await request.json()
 
-    # WhatsApp sends events in entry[0].changes[0].value
     try:
-        messages = (
-            data.get("entry", [])[0]
-            .get("changes", [])[0]
-            .get("value", {})
-            .get("messages", [])
-        )
-    except Exception:
-        messages = []
+        entry = data["entry"][0]
+        changes = entry["changes"][0]
+        value = changes["value"]
 
-    for message in messages:
-        if message.get("type") == "text":
-            from_number = message["from"]
-            user_text = message["text"]["body"]
+        if "messages" in value:
+            message = value["messages"][0]
+            sender = message["from"]
+            text = message.get("text", {}).get("body", "").strip()
 
-            # For Day 1: simple static JSON-driven reply
-            reply_text = get_first_flow_reply(user_text)
+            # Basic menu logic
+            if text in ["1", "Jobs", "jobs"]:
+                reply = "🔎 Great! Send me a job title (e.g., 'Accountant') and I’ll search for opportunities."
+            elif text in ["2", "Training", "training"]:
+                reply = "📚 Awesome! We’ll connect you to training resources. (Coming soon!)"
+            elif text in ["3", "Mentor", "mentor"]:
+                reply = "🤝 Wonderful! We’ll match you with mentors. (Coming soon!)"
+            else:
+                reply = (
+                    "👋 Welcome to JibuJob! Reply with:\n"
+                    "1️⃣ Jobs\n"
+                    "2️⃣ Training\n"
+                    "3️⃣ Mentor"
+                )
 
-            send_whatsapp_message(from_number, reply_text)
+            await send_message(sender, reply)
 
-    return {"status": "ok"}
+    except Exception as e:
+        print("Webhook Error:", e)
+
+    return {"status": "received"}
 
 
-# --- Send message to WhatsApp ---
-def send_whatsapp_message(to: str, message: str):
+async def send_message(recipient: str, message: str):
+    """Send WhatsApp message via Cloud API"""
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json",
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": to,
+        "to": recipient,
         "type": "text",
         "text": {"body": message},
     }
-    response = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
-    if response.status_code >= 400:
-        print("Error sending message:", response.text)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(WHATSAPP_API_URL, headers=headers, json=payload)
+        print("Send message response:", response.status_code, response.text)
 
 
-# --- First working flow (static JSON) ---
-def get_first_flow_reply(user_text: str) -> str:
-    """
-    Very simple Day 1 flow:
-    User says anything → reply with a canned response
-    """
-    flow = {
-        "greeting": "👋 Welcome to JibuJob! Reply with:\n1️⃣ Jobs\n2️⃣ Training\n3️⃣ Mentor",
-        "fallback": "I didn’t understand that. Please reply with 1, 2, or 3.",
-        "options": {
-            "1": "Here are some jobs near you 🚀",
-            "2": "Here’s training content 📚",
-            "3": "We’ll connect you with a mentor 🤝",
-        },
-    }
-
-    normalized = user_text.strip().lower()
-    return flow["options"].get(normalized, flow["greeting"])
+@app.post("/send_message")
+async def manual_send(request: Request):
+    """Manual test endpoint to send messages"""
+    data = await request.json()
+    recipient = data.get("recipient")
+    message = data.get("message", "Hello from JibuJob!")
+    await send_message(recipient, message)
+    return {"status": "sent", "to": recipient, "message": message}
