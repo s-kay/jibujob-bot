@@ -5,9 +5,10 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-# ✅ Environment variables
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "testtoken")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+BASE_URL = "https://graph.facebook.com/v22.0"
 
 # ✅ Mock job dataset
 JOB_LISTINGS = {
