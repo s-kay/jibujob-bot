@@ -7,7 +7,7 @@ app = FastAPI()
 
 # Load sensitive values from environment variables
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "test_verify_token")
-ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
 # WhatsApp Graph API base
@@ -37,14 +37,14 @@ mentors = [
 
 # Function to send messages
 async def send_whatsapp_message(to: str, message: str) -> None:
-    if not ACCESS_TOKEN:
-        print("❌ ACCESS_TOKEN is missing. Set WHATSAPP_ACCESS_TOKEN in environment.")
+    if not WHATSAPP_TOKEN:
+        print("❌ WHATSAPP_TOKEN is missing. Set WHATSAPP_ACCESS_TOKEN in environment.")
         return
 
     try:
         url = get_whatsapp_url()
         headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}",
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
             "Content-Type": "application/json"
         }
         payload: Dict = {
