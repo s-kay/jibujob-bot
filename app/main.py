@@ -23,69 +23,43 @@ if not WHATSAPP_PHONE_ID:
 
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logging.info("🚀 Day 4 WhatsApp bot starting...")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# ==============================
-# Mock Data
-# ==============================
-job_listings = [
-    {"title": "Software Engineer", "company": "Safaricom", "location": "Nairobi", "apply_link": "https://safaricom.co.ke/careers"},
-    {"title": "Data Analyst", "company": "KCB Bank", "location": "Nairobi", "apply_link": "https://kcbgroup.com/careers"},
-    {"title": "AI Research Intern", "company": "iHub Kenya", "location": "Remote", "apply_link": "https://ihub.co.ke/jobs"},
-    {"title": "Cloud Engineer", "company": "Microsoft ADC", "location": "Lagos", "apply_link": "https://microsoft.com/careers"},
-    {"title": "Frontend Developer", "company": "Andela", "location": "Remote", "apply_link": "https://andela.com/careers"},
-]
-
-
-training_modules = {
-    "1": ["Basic ICT Skills", "Introduction to Solar Installation", "Agribusiness 101"],
-    "2": ["Intermediate Web Development", "Mobile Money Operations", "Community Healthcare Basics"],
-    "3": ["Advanced AI Skills", "Entrepreneurship & Startups", "Renewable Energy Systems"],
-}
-
-mentors = [
-    {"name": "Alice", "expertise": "Agribusiness"},
-    {"name": "Brian", "expertise": "Software Development"},
-    {"name": "Cynthia", "expertise": "Renewable Energy"},
-]
-
-# Session state memory (user_id → state)
-user_sessions = {}
-
-# -------------------------
-# Helper: send message
-# -------------------------
-def send_message(to, text):
-    url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to,
-        "text": {"body": text},
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code != 200:
-        print(f"❌ Error sending message: {response.text}")
-    return response.json()
-
-def get_main_menu():
+# -------------------------------------------------
+# Helpers
+# -------------------------------------------------
+def format_main_menu(user_name: str) -> str:
+    """Return the main menu message with personalized greeting."""
     return (
+        f"Hi {user_name}! 👋\n\n"
         "👋 Welcome to JibuJob Career Bot!\n"
         "Please choose an option:\n\n"
         "1️⃣ Job Listings\n"
         "2️⃣ Training Modules\n"
         "3️⃣ Mentorship\n"
+        "4️⃣ Micro-entrepreneurship\n"
         "0️⃣ Exit"
     )
 
-# ==============================
-# Webhook Endpoints
-# ==============================
-# Webhook verification
+def handle_menu_choice(choice: str, user_name: str) -> str:
+    """Handle user menu choice."""
+    if choice == "1":
+        return "💼 Here are the latest *Job Listings*:\n\n- Software Engineer\n- Data Analyst\n- Sales Associate\n\nReply 0️⃣ to return to the main menu."
+    elif choice == "2":
+        return "📚 Choose a *Training Module*:\n\n1. Beginner\n2. Intermediate\n3. Advanced\n\nReply 0️⃣ to return to the main menu."
+    elif choice == "3":
+        return "🤝 *Mentorship* options:\n\n- Tech Career Guidance\n- Business Startups\n- Leadership Coaching\n\nReply 0️⃣ to return to the main menu."
+    elif choice == "4":
+        return "🚀 *Micro-entrepreneurship* opportunities:\n\n- Digital Marketing\n- Agribusiness\n- E-commerce\n\nReply 0️⃣ to return to the main menu."
+    elif choice == "0":
+        return "👋 Thank you for using JibuJob Career Bot. Goodbye!"
+    else:
+        return "❌ Invalid option. Please try again.\n\n" + format_main_menu(user_name)
+
+# -------------------------------------------------
+# WhatsApp Webhook Verification
+# -------------------------------------------------
 @app.get("/webhook")
 async def verify(request: Request):
     params = request.query_params
@@ -93,114 +67,40 @@ async def verify(request: Request):
         return JSONResponse(content=int(params.get("hub.challenge", 0)), status_code=200)
     return JSONResponse(content="Invalid verification token", status_code=403)
 
-
-
-
+# -------------------------------------------------
+# WhatsApp Message Receiver
+# -------------------------------------------------
 @app.post("/webhook")
-async def receive_webhook(request: Request):
-    """Handle incoming messages."""
+async def receive_message(request: Request):
     data = await request.json()
-    logging.info(f"📩 Incoming: {data}")
+    logger.info(f"Incoming webhook: {data}")
 
     try:
+        # Extract user info
         entry = data["entry"][0]
         changes = entry["changes"][0]
         value = changes["value"]
         messages = value.get("messages")
 
         if messages:
-            message = messages[0]
-            sender = message["from"]
+            msg = messages[0]
+            user_name = msg.get("profile", {}).get("name", "there")
+            phone_number = msg["from"]
+            user_text = msg.get("text", {}).get("body", "").strip()
 
-            # ✅ Extract user name properly
-            contacts = value.get("contacts", [])
-            user_name = contacts[0].get("profile", {}).get("name", "there") if contacts else "there"
+            # Determine response
+            if user_text.lower() in ["hi", "hello", "menu", "start"]:
+                response_text = format_main_menu(user_name)
+            else:
+                response_text = handle_menu_choice(user_text, user_name)
 
-            text = message.get("text", {}).get("body", "").strip().lower()
-            print(f"📩 Message from {sender} ({user_name}): {text}")
+            logger.info(f"Replying to {phone_number}: {response_text}")
 
-            # Check user session state
-            state = user_sessions.get(sender, {"step": "menu"})
-
-            # Exit command
-            if text == "0":
-                send_message(sender, "👋 Goodbye! Type 'hi' to start again anytime.")
-                user_sessions.pop(sender, None)
-                return {"status": "ok"}
-
-            # Initialize user state if new
-            if sender not in user_sessions:
-                user_sessions[sender] = {"step": "menu", "interest": None}
-                send_message(sender, f"Hi {user_name}! 👋")
-                send_message(sender, get_main_menu())
-                return JSONResponse(content={"status": "new user greeted"})
-
-            # Handle menu selections
-            if state["step"] == "menu":
-                if text == "1":
-                    # Job listings
-                    job_list = "\n".join(
-                        [f"{idx+1}. {job['title']} at {job['company']} ({job['location']})"
-                        for idx, job in enumerate(job_listings)]
-                    )
-                    reply = f"💼 Available Jobs:\n\n{job_list}\n\n👉 Reply with a job number to see details."
-                    user_sessions[sender]["step"] = "job_list"
-                    send_message(sender, reply)
-
-                elif text == "2":
-                    # Training categories
-                    module_text = "📚 Choose a training level:\n"
-                    module_text += "1. Beginner\n2. Intermediate\n3. Advanced"
-                    user_sessions[sender] = {"step": "training"}
-                    send_message(sender, module_text)
-
-                elif text == "3":
-                    # Mentorship
-                    mentor_text = "🤝 Available Mentors:\n"
-                    for m in mentors:
-                        mentor_text += f"- {m['name']} ({m['expertise']})\n"
-                    mentor_text += "\nType 'menu' to go back."
-                    user_sessions[sender] = {"step": "menu"}
-                    send_message(sender, mentor_text)
-
-                else:
-                    send_message(sender, get_main_menu())
-
-            # Handle job details
-            elif state.get("step") == "job_list" and text.isdigit():
-                idx = int(text) - 1
-                if 0 <= idx < len(job_listings):
-                    job = job_listings[idx]
-                    reply = (
-                        f"💼 *{job['title']}*\n"
-                        f"🏢 {job['company']}\n"
-                        f"📍 {job['location']}\n"
-                        f"🔗 Apply here: {job['apply_link']}"
-                    )
-                    send_message(sender, reply)
-                else:
-                    send_message(sender, "⚠️ Invalid choice. Please select a valid job number.")
-
-            # Handle training selection
-            elif state["step"] == "training":
-                if text in training_modules:
-                    selected = training_modules[text]
-                    course_text = f"📚 {['Beginner','Intermediate','Advanced'][int(text)-1]} Modules:\n"
-                    for c in selected:
-                        course_text += f"- {c}\n"
-                    course_text += "\nType 'menu' to return."
-                    user_sessions[sender] = {"step": "menu"}
-                    send_message(sender, course_text)
-                else:
-                    send_message(sender, "❌ Invalid choice. Type 1, 2, or 3.")
-
-            # Reset to menu
-            elif text in ["menu", "hi"]:
-                send_message(sender, get_main_menu())
-                user_sessions[sender] = {"step": "menu"}
+            # Simulated response (replace with WhatsApp API call later)
+            return {"reply": response_text}
 
     except Exception as e:
-        logging.error(f"❌ Error handling webhook: {e}")
+        logger.error(f"Error handling message: {e}")
 
     return {"status": "ok"}
 
