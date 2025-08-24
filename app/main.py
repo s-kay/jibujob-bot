@@ -1,162 +1,187 @@
 import os
-import logging
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-import httpx
+from flask import Flask, request, jsonify, Response
+import requests
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+app = Flask(__name__)
 
-app = FastAPI()
-
-# Load environment variables
+# WhatsApp API credentials
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob_verify")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
     raise ValueError("Missing one or more required environment variables: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID")
 
-GRAPH_API_URL = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
+# In-memory state tracking per user
+user_state = {}
 
-# --- Utils ---
-async def send_whatsapp_message(to: str, message: str):
+def send_message(to, message):
+    url = f"https://graph.facebook.com/v19.0/{WHATSAPP_PHONE_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
     payload = {
         "messaging_product": "whatsapp",
         "to": to,
         "type": "text",
-        "text": {"body": message},
+        "text": {"body": message}
     }
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(GRAPH_API_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            logging.info(f"Message sent to {to}: {message}")
-        except httpx.HTTPStatusError as e:
-            logging.error(f"Error sending message: {e.response.text}")
-        except Exception as e:
-            logging.error(f"Unexpected error: {str(e)}")
+def get_main_menu(name):
+    return (
+        f"Hi {name}! 👋\n\n"
+        "👋 Welcome to *JibuJob Career Bot*!\n"
+        "Please choose an option:\n\n"
+        "1️⃣ Job Listings\n"
+        "2️⃣ Training Modules\n"
+        "3️⃣ Mentorship\n"
+        "4️⃣ Micro-entrepreneurship\n"
+        "0️⃣ Exit"
+    )
 
-# --- Handlers ---
-async def handle_message(from_number: str, user_name: str, message_text: str):
-    message_text = message_text.strip().lower()
+@app.route("/webhook", methods=["GET", "POST"])
+def webhook():
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
 
-    if message_text in ["hi", "hello", "start"]:
-        reply = (
-            f"Hi {user_name}! 👋\n\n"
-            "👋 Welcome to JibuJob Career Bot!\n"
-            "Please choose an option:\n\n"
-            "1️⃣ Job Listings\n"
-            "2️⃣ Training Modules\n"
-            "3️⃣ Mentorship\n"
-            "4️⃣ Micro-entrepreneurship\n"
-            "0️⃣ Exit"
-        )
-        await send_whatsapp_message(from_number, reply)
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return Response(challenge, status=200)
+        else:
+            return Response("Verification failed", status=403)
 
-    elif message_text == "1":
-        reply = (
-            "🔎 *Job Listings*\n\n"
-            "Here are some opportunities you might like:\n\n"
-            "• Software Developer (Remote) – Apply here: https://jobs.example.com/dev\n"
-            "• Marketing Intern (Nairobi) – Apply here: https://jobs.example.com/marketing\n"
-            "• Customer Support Agent – Apply here: https://jobs.example.com/support\n\n"
-            "👉 Reply with 'hi' anytime to return to the main menu."
-        )
-        await send_whatsapp_message(from_number, reply)
+    if request.method == "POST":
+        body = request.get_json()
+        # process body here
+        return Response("EVENT_RECEIVED", status=200)
+    data = request.get_json()
+    if data.get("object") == "whatsapp_business_account":
+        for entry in data.get("entry", []):
+            for change in entry.get("changes", []):
+                value = change.get("value", {})
+                for msg in value.get("messages", []):
+                    phone_number = msg["from"]
+                    text = msg.get("text", {}).get("body", "").strip()
+                    name = msg.get("profile", {}).get("name", "there")
 
-    elif message_text == "2":
-        reply = (
-            "📚 *Training Modules*\n\n"
-            "Upskill yourself with our training:\n\n"
-            "• Digital Skills – https://training.example.com/digital\n"
-            "• Entrepreneurship – https://training.example.com/entrepreneurship\n"
-            "• Career Readiness – https://training.example.com/career\n\n"
-            "👉 Reply with 'hi' anytime to return to the main menu."
-        )
-        await send_whatsapp_message(from_number, reply)
+                    # Initialize user state if new
+                    if phone_number not in user_state:
+                        user_state[phone_number] = {"state": "MAIN_MENU"}
 
-    elif message_text == "3":
-        reply = (
-            "🤝 *Mentorship*\n\n"
-            "Connect with experienced mentors:\n\n"
-            "• Tech Mentors – https://mentorship.example.com/tech\n"
-            "• Business Mentors – https://mentorship.example.com/business\n"
-            "• Career Coaches – https://mentorship.example.com/coaches\n\n"
-            "👉 Reply with 'hi' anytime to return to the main menu."
-        )
-        await send_whatsapp_message(from_number, reply)
+                    state = user_state[phone_number]["state"]
 
-    elif message_text == "4":
-        reply = (
-            "💡 *Micro-entrepreneurship*\n\n"
-            "Explore small business opportunities:\n\n"
-            "• Online Freelancing – https://biz.example.com/freelance\n"
-            "• Agribusiness – https://biz.example.com/agri\n"
-            "• E-commerce – https://biz.example.com/ecommerce\n\n"
-            "👉 Reply with 'hi' anytime to return to the main menu."
-        )
-        await send_whatsapp_message(from_number, reply)
+                    # Handle exit
+                    if text == "0":
+                        user_state[phone_number] = {"state": "MAIN_MENU"}
+                        send_message(phone_number, get_main_menu(name))
+                        continue
 
-    elif message_text == "0":
-        reply = "👋 Goodbye! Thank you for using JibuJob Career Bot. We wish you success!"
-        await send_whatsapp_message(from_number, reply)
+                    # MAIN MENU flow
+                    if state == "MAIN_MENU":
+                        if text == "1":
+                            job_interest = user_state[phone_number].get("job_interest")
+                            if job_interest:
+                                send_message(
+                                    phone_number,
+                                    f"Last time you were looking for *{job_interest}* jobs.\n"
+                                    "👉 Do you still want this, or would you like to change?\n"
+                                    "Type a new job interest or 'same' to continue."
+                                )
+                            else:
+                                send_message(phone_number, "Which type of job are you interested in?")
+                            user_state[phone_number]["state"] = "JOBS"
 
-    else:
-        reply = (
-            "❓ I didn’t understand that.\n\n"
-            "Please choose an option:\n"
-            "1️⃣ Job Listings\n"
-            "2️⃣ Training Modules\n"
-            "3️⃣ Mentorship\n"
-            "4️⃣ Micro-entrepreneurship\n"
-            "0️⃣ Exit"
-        )
-        await send_whatsapp_message(from_number, reply)
+                        elif text == "2":
+                            training_interest = user_state[phone_number].get("training_interest")
+                            if training_interest:
+                                send_message(
+                                    phone_number,
+                                    f"Previously, you were exploring *{training_interest}* training.\n"
+                                    "👉 Do you still want this, or would you like to change?\n"
+                                    "Type a new training module or 'same' to continue."
+                                )
+                            else:
+                                send_message(phone_number, "Which training module would you like to explore?")
+                            user_state[phone_number]["state"] = "TRAINING"
 
-# --- Webhook ---
-@app.get("/webhook")
-async def verify_webhook(request: Request):
-    params = dict(request.query_params)
-    if (
-        params.get("hub.mode") == "subscribe"
-        and params.get("hub.verify_token") == VERIFY_TOKEN
-    ):
-        logging.info("Webhook verified successfully.")
-        return JSONResponse(content=int(params.get("hub.challenge", 0)))
-    logging.warning("Webhook verification failed.")
-    return JSONResponse(content="Verification failed", status_code=403)
+                        elif text == "3":
+                            mentorship_interest = user_state[phone_number].get("mentorship_interest")
+                            if mentorship_interest:
+                                send_message(
+                                    phone_number,
+                                    f"Previously, you were interested in mentorship around *{mentorship_interest}*.\n"
+                                    "👉 Do you still want this, or would you like to change?\n"
+                                    "Type a new mentorship area or 'same' to continue."
+                                )
+                            else:
+                                send_message(phone_number, "Which mentorship area are you interested in?")
+                            user_state[phone_number]["state"] = "MENTORSHIP"
 
-@app.post("/webhook")
-async def webhook_handler(request: Request):
-    data = await request.json()
-    logging.info(f"Incoming webhook data: {data}")
+                        elif text == "4":
+                            micro_interest = user_state[phone_number].get("micro_interest")
+                            if micro_interest:
+                                send_message(
+                                    phone_number,
+                                    f"Previously, you wanted to explore *{micro_interest}* micro-business opportunities.\n"
+                                    "👉 Do you still want this, or would you like to change?\n"
+                                    "Type a new business idea or 'same' to continue."
+                                )
+                            else:
+                                send_message(phone_number, "Which type of micro-entrepreneurship are you interested in?")
+                            user_state[phone_number]["state"] = "MICRO"
 
-    try:
-        if "entry" in data:
-            for entry in data["entry"]:
-                for change in entry.get("changes", []):
-                    value = change.get("value", {})
-                    messages = value.get("messages", [])
-                    contacts = value.get("contacts", [])
-                    if messages and contacts:
-                        msg = messages[0]
-                        contact = contacts[0]
-                        from_number = msg["from"]
-                        message_text = msg.get("text", {}).get("body", "")
-                        user_name = contact.get("profile", {}).get("name", "there")
+                        else:
+                            send_message(phone_number, "Invalid option. Please choose 1-4 or 0 to Exit.")
 
-                        await handle_message(from_number, user_name, message_text)
-        return JSONResponse(content={"status": "ok"})
-    except Exception as e:
-        logging.error(f"Error handling webhook: {str(e)}")
-        return JSONResponse(content={"status": "error"}, status_code=500)
+                    # JOBS flow
+                    elif state == "JOBS":
+                        if text.lower() == "same" and user_state[phone_number].get("job_interest"):
+                            job_interest = user_state[phone_number]["job_interest"]
+                            send_message(phone_number, f"Here are the latest *{job_interest}* job listings:\n👉 https://mock-jobs.com/{job_interest}")
+                        else:
+                            user_state[phone_number]["job_interest"] = text
+                            send_message(phone_number, f"Got it! We'll track *{text}* jobs for you.\n👉 https://mock-jobs.com/{text}")
+                        user_state[phone_number]["state"] = "MAIN_MENU"
+                        send_message(phone_number, get_main_menu(name))
 
-@app.on_event("startup")
-async def startup_event():
-    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive messages.")
+                    # TRAINING flow
+                    elif state == "TRAINING":
+                        if text.lower() == "same" and user_state[phone_number].get("training_interest"):
+                            training_interest = user_state[phone_number]["training_interest"]
+                            send_message(phone_number, f"Continuing with *{training_interest}* training.\n👉 https://mock-training.com/{training_interest}")
+                        else:
+                            user_state[phone_number]["training_interest"] = text
+                            send_message(phone_number, f"Great! Explore *{text}* training here:\n👉 https://mock-training.com/{text}")
+                        user_state[phone_number]["state"] = "MAIN_MENU"
+                        send_message(phone_number, get_main_menu(name))
+
+                    # MENTORSHIP flow
+                    elif state == "MENTORSHIP":
+                        if text.lower() == "same" and user_state[phone_number].get("mentorship_interest"):
+                            mentorship_interest = user_state[phone_number]["mentorship_interest"]
+                            send_message(phone_number, f"Connecting you with mentors in *{mentorship_interest}*.\n👉 https://mock-mentorship.com/{mentorship_interest}")
+                        else:
+                            user_state[phone_number]["mentorship_interest"] = text
+                            send_message(phone_number, f"Awesome! Mentorship in *{text}* is available here:\n👉 https://mock-mentorship.com/{text}")
+                        user_state[phone_number]["state"] = "MAIN_MENU"
+                        send_message(phone_number, get_main_menu(name))
+
+                    # MICRO flow
+                    elif state == "MICRO":
+                        if text.lower() == "same" and user_state[phone_number].get("micro_interest"):
+                            micro_interest = user_state[phone_number]["micro_interest"]
+                            send_message(phone_number, f"Here are some opportunities in *{micro_interest}* micro-entrepreneurship:\n👉 https://mock-micro.com/{micro_interest}")
+                        else:
+                            user_state[phone_number]["micro_interest"] = text
+                            send_message(phone_number, f"Excellent! Explore *{text}* micro-entrepreneurship here:\n👉 https://mock-micro.com/{text}")
+                        user_state[phone_number]["state"] = "MAIN_MENU"
+                        send_message(phone_number, get_main_menu(name))
+
+    return "EVENT_RECEIVED", 200
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
