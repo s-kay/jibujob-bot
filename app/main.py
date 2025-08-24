@@ -30,11 +30,13 @@ logging.info("🚀 Day 4 WhatsApp bot starting...")
 # Mock Data
 # ==============================
 job_listings = [
-    {"title": "Solar Technician", "location": "Nairobi", "type": "Full-time"},
-    {"title": "Agribusiness Officer", "location": "Kisumu", "type": "Contract"},
-    {"title": "Digital Marketing Intern", "location": "Remote", "type": "Internship"},
-    {"title": "Community Health Worker", "location": "Mombasa", "type": "Part-time"},
+    {"title": "Software Engineer", "company": "Safaricom", "location": "Nairobi", "apply_link": "https://safaricom.co.ke/careers"},
+    {"title": "Data Analyst", "company": "KCB Bank", "location": "Nairobi", "apply_link": "https://kcbgroup.com/careers"},
+    {"title": "AI Research Intern", "company": "iHub Kenya", "location": "Remote", "apply_link": "https://ihub.co.ke/jobs"},
+    {"title": "Cloud Engineer", "company": "Microsoft ADC", "location": "Lagos", "apply_link": "https://microsoft.com/careers"},
+    {"title": "Frontend Developer", "company": "Andela", "location": "Remote", "apply_link": "https://andela.com/careers"},
 ]
+
 
 training_modules = {
     "1": ["Basic ICT Skills", "Introduction to Solar Installation", "Agribusiness 101"],
@@ -93,6 +95,7 @@ async def verify(request: Request):
 
 
 
+
 @app.post("/webhook")
 async def receive_webhook(request: Request):
     """Handle incoming messages."""
@@ -108,7 +111,6 @@ async def receive_webhook(request: Request):
         if messages:
             message = messages[0]
             sender = message["from"]
-            text = message["text"]["body"].strip()
 
             # ✅ Extract user name properly
             contacts = value.get("contacts", [])
@@ -120,6 +122,7 @@ async def receive_webhook(request: Request):
             # Check user session state
             state = user_sessions.get(sender, {"step": "menu"})
 
+            # Exit command
             if text == "0":
                 send_message(sender, "👋 Goodbye! Type 'hi' to start again anytime.")
                 user_sessions.pop(sender, None)
@@ -132,16 +135,17 @@ async def receive_webhook(request: Request):
                 send_message(sender, get_main_menu())
                 return JSONResponse(content={"status": "new user greeted"})
 
-            # Handle back-to-menu
+            # Handle menu selections
             if state["step"] == "menu":
                 if text == "1":
                     # Job listings
-                    job_text = "📋 Job Listings:\n"
-                    for job in job_listings:
-                        job_text += f"- {job['title']} ({job['location']}, {job['type']})\n"
-                    job_text += "\nType 'menu' to go back."
-                    user_sessions[sender] = {"step": "menu"}
-                    send_message(sender, job_text)
+                    job_list = "\n".join(
+                        [f"{idx+1}. {job['title']} at {job['company']} ({job['location']})"
+                        for idx, job in enumerate(job_listings)]
+                    )
+                    reply = f"💼 Available Jobs:\n\n{job_list}\n\n👉 Reply with a job number to see details."
+                    user_sessions[sender]["step"] = "job_list"
+                    send_message(sender, reply)
 
                 elif text == "2":
                     # Training categories
@@ -162,6 +166,22 @@ async def receive_webhook(request: Request):
                 else:
                     send_message(sender, get_main_menu())
 
+            # Handle job details
+            elif state.get("step") == "job_list" and text.isdigit():
+                idx = int(text) - 1
+                if 0 <= idx < len(job_listings):
+                    job = job_listings[idx]
+                    reply = (
+                        f"💼 *{job['title']}*\n"
+                        f"🏢 {job['company']}\n"
+                        f"📍 {job['location']}\n"
+                        f"🔗 Apply here: {job['apply_link']}"
+                    )
+                    send_message(sender, reply)
+                else:
+                    send_message(sender, "⚠️ Invalid choice. Please select a valid job number.")
+
+            # Handle training selection
             elif state["step"] == "training":
                 if text in training_modules:
                     selected = training_modules[text]
@@ -174,7 +194,8 @@ async def receive_webhook(request: Request):
                 else:
                     send_message(sender, "❌ Invalid choice. Type 1, 2, or 3.")
 
-            elif text.lower() == "menu" or text.lower() == "hi":
+            # Reset to menu
+            elif text in ["menu", "hi"]:
                 send_message(sender, get_main_menu())
                 user_sessions[sender] = {"step": "menu"}
 
@@ -183,9 +204,8 @@ async def receive_webhook(request: Request):
 
     return {"status": "ok"}
 
-# -------------------------
-# Startup log
-# -------------------------
+# ------------------------- 
+# # Startup log # ------------------------- 
 @app.on_event("startup")
 async def startup_event():
     print("🚀 JibuJob WhatsApp bot (Day 4) is live and running.")
