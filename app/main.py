@@ -1,165 +1,175 @@
 import os
-import logging
+import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-import httpx
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Configuration
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob-verify")
-GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v22.0")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
 
-# Fail fast if critical ENV vars are missing
-if not WHATSAPP_TOKEN:
-    raise RuntimeError("❌ Missing WHATSAPP_TOKEN in environment.")
-if not WHATSAPP_PHONE_ID:
-    raise RuntimeError("❌ Missing WHATSAPP_PHONE_ID in environment.")
+if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID or not VERIFY_TOKEN:
+    raise ValueError("Missing one or more required environment variables.")
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-
-# Initialize FastAPI app
 app = FastAPI()
 
-# In-memory user sessions
-user_sessions = {}
+# -------------------------
+# In-memory user state store
+# -------------------------
+user_states = {}
 
-# Mock dataset for job listings
-mock_jobs = [
-    {"title": "Software Engineer", "company": "Safaricom", "location": "Nairobi", "apply_link": "https://safaricom.co.ke/careers"},
-    {"title": "Data Analyst", "company": "KCB Bank", "location": "Nairobi", "apply_link": "https://kcbgroup.com/careers"},
-    {"title": "AI Research Intern", "company": "iHub Kenya", "location": "Remote", "apply_link": "https://ihub.co.ke/jobs"},
-    {"title": "Cloud Engineer", "company": "Microsoft ADC", "location": "Lagos", "apply_link": "https://microsoft.com/careers"},
-    {"title": "Frontend Developer", "company": "Andela", "location": "Remote", "apply_link": "https://andela.com/careers"},
-]
+# -------------------------
+# Mock job dataset
+# -------------------------
+mock_jobs = {
+    "tech": [
+        {"title": "Junior Software Developer", "company": "Nairobi Tech Hub"},
+        {"title": "Cloud Engineer Intern", "company": "Safaricom"},
+    ],
+    "finance": [
+        {"title": "Accounting Assistant", "company": "Equity Bank"},
+        {"title": "Financial Analyst Trainee", "company": "KCB Group"},
+    ],
+    "general": [
+        {"title": "Customer Service Representative", "company": "Kenya Airways"},
+        {"title": "Logistics Assistant", "company": "DHL Nairobi"},
+    ]
+}
 
-# Helper function: Send message via WhatsApp API
-async def send_message(to: str, text: str):
-    url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{WHATSAPP_PHONE_ID}/messages"
-    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+# -------------------------
+# Helper: send message
+# -------------------------
+def send_message(to, text):
+    url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
     payload = {
         "messaging_product": "whatsapp",
         "to": to,
-        "type": "text",
-        "text": {"body": text}
+        "text": {"body": text},
     }
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200:
+        print(f"❌ Error sending message: {response.text}")
+    return response.json()
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            logging.info(f"✅ Message sent to {to}: {text}")
-        except httpx.HTTPStatusError as e:
-            logging.error(f"❌ Error sending message: {e.response.text}")
-        except Exception as e:
-            logging.error(f"❌ Unexpected error sending message: {str(e)}")
+# -------------------------
+# Helper: main menu
+# -------------------------
+def get_main_menu():
+    return (
+        "👋 Welcome to *JibuJob*! Please choose an option:\n\n"
+        "1️⃣ Jobs\n"
+        "2️⃣ Mentorship\n"
+        "3️⃣ Skills Training\n"
+        "4️⃣ Micro-entrepreneurship\n\n"
+        "Type the number of your choice."
+    )
 
+# -------------------------
 # Webhook verification
+# -------------------------
 @app.get("/webhook")
-async def verify(request: Request):
+async def verify_webhook(request: Request):
     params = request.query_params
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
-        return JSONResponse(content=int(params.get("hub.challenge", 0)), status_code=200)
-    return JSONResponse(content="Invalid verification token", status_code=403)
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
 
-# Webhook message receiver
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        print("✅ Webhook verified.")
+        return JSONResponse(content=int(challenge))
+    return JSONResponse(content="Verification failed", status_code=403)
+
+# -------------------------
+# Webhook message handling
+# -------------------------
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
-    logging.info(f"📩 Incoming webhook data: {data}")
-
     try:
-        if "entry" in data:
-            changes = data["entry"][0].get("changes", [])
-            if changes:
-                value = changes[0].get("value", {})
-                messages = value.get("messages", [])
-                contacts = value.get("contacts", [])
+        entry = data["entry"][0]["changes"][0]["value"]
+        messages = entry.get("messages")
 
-                if messages:
-                    phone_number = messages[0]["from"]
-                    user_text = messages[0]["text"]["body"].strip().lower()
-                    user_name = contacts[0]["profile"]["name"] if contacts else "there"
+        if messages:
+            msg = messages[0]
+            from_number = msg["from"]
 
-                    # Initialize session if first time
-                    if phone_number not in user_sessions:
-                        user_sessions[phone_number] = {"step": "menu"}
-                        await send_message(
-                            phone_number,
-                            f"👋 Hi {user_name}, welcome to JibuJob!\nReply 'Menu' to see your options."
-                        )
-                        return {"status": "new user greeted"}
+            # Extract user name if available
+            profile = entry.get("contacts", [{}])[0].get("profile", {})
+            user_name = profile.get("name", "there")
 
-                    # Retrieve last step
-                    session = user_sessions[phone_number]
+            text = msg.get("text", {}).get("body", "").strip().lower()
+            print(f"📩 Message from {from_number} ({user_name}): {text}")
 
-                    # Main menu
-                    if user_text in ["hi", "menu", "hello"]:
-                        menu = (
-                            "📋 *Main Menu*\n\n"
-                            "1️⃣ Job Listings\n"
-                            "2️⃣ Training Resources\n"
-                            "3️⃣ Mentorship Connections"
-                        )
-                        user_sessions[phone_number]["step"] = "menu"
-                        await send_message(phone_number, menu)
+            # Initialize user state if new
+            if from_number not in user_states:
+                user_states[from_number] = {"stage": "menu", "interest": None}
+                send_message(from_number, f"Hi {user_name}! 👋")
+                send_message(from_number, get_main_menu())
+                return JSONResponse(content={"status": "new user greeted"})
 
-                    # Job listings
-                    elif user_text.startswith("1") or "job" in user_text:
-                        job_list = "\n".join(
-                            [f"{idx+1}. {job['title']} at {job['company']} ({job['location']})"
-                             for idx, job in enumerate(mock_jobs)]
-                        )
-                        reply = f"💼 Available Jobs:\n\n{job_list}\n\n👉 Reply with a job number to see details."
-                        user_sessions[phone_number]["step"] = "job_list"
-                        await send_message(phone_number, reply)
+            # Handle back-to-menu
+            if text in ["menu", "back"]:
+                user_states[from_number]["stage"] = "menu"
+                send_message(from_number, get_main_menu())
+                return JSONResponse(content={"status": "returned to menu"})
 
-                    # Handle job details if user previously asked for jobs
-                    elif session.get("step") == "job_list" and user_text.isdigit():
-                        idx = int(user_text) - 1
-                        if 0 <= idx < len(mock_jobs):
-                            job = mock_jobs[idx]
-                            reply = (
-                                f"💼 *{job['title']}*\n"
-                                f"🏢 {job['company']}\n"
-                                f"📍 {job['location']}\n"
-                                f"🔗 Apply here: {job['apply_link']}"
-                            )
-                            await send_message(phone_number, reply)
-                        else:
-                            await send_message(phone_number, "⚠️ Invalid choice. Please select a valid job number.")
+            stage = user_states[from_number]["stage"]
 
-                    elif user_text.startswith("2") or "train" in user_text:
-                        resources = (
-                            "📚 Free Training Resources:\n"
-                            "- Microsoft Learn: https://learn.microsoft.com/\n"
-                            "- Coursera: https://coursera.org\n"
-                            "- ALX Africa: https://www.alxafrica.com/"
-                        )
-                        await send_message(phone_number, resources)
+            # -------------------------
+            # Stage: menu
+            # -------------------------
+            if stage == "menu":
+                if text in ["1", "jobs"]:
+                    user_states[from_number]["stage"] = "jobs"
+                    send_message(
+                        from_number,
+                        "Great choice! Do you prefer *tech* jobs, *finance*, or *general* opportunities?"
+                    )
+                elif text in ["2", "mentorship"]:
+                    user_states[from_number]["stage"] = "mentorship"
+                    send_message(from_number, "🌱 Mentorship is coming soon! Type 'menu' to return.")
+                elif text in ["3", "skills training"]:
+                    user_states[from_number]["stage"] = "training"
+                    send_message(from_number, "📘 Skills training modules will be available soon!")
+                elif text in ["4", "micro-entrepreneurship"]:
+                    user_states[from_number]["stage"] = "entrepreneurship"
+                    send_message(from_number, "🚀 Micro-entrepreneurship resources are coming soon!")
+                else:
+                    send_message(from_number, "❌ Invalid choice. Please select again:\n\n" + get_main_menu())
 
-                    elif user_text.startswith("3") or "mentor" in user_text:
-                        mentorship = (
-                            "🤝 Mentorship Program:\n"
-                            "We can connect you with mentors in Tech, Business, and Design.\n"
-                            "Reply with your area of interest."
-                        )
-                        await send_message(phone_number, mentorship)
+            # -------------------------
+            # Stage: jobs
+            # -------------------------
+            elif stage == "jobs":
+                if text in mock_jobs:
+                    user_states[from_number]["interest"] = text
+                    jobs = mock_jobs[text]
+                    job_list = "\n".join([f"- {j['title']} at {j['company']}" for j in jobs])
+                    send_message(from_number, f"Here are some {text} jobs:\n\n{job_list}\n\nType 'menu' to go back.")
+                else:
+                    send_message(
+                        from_number,
+                        "❌ Please type 'tech', 'finance', or 'general' to see jobs. Or type 'menu' to return."
+                    )
 
-                    else:
-                        await send_message(phone_number, "❓ I didn’t understand. Please reply with 'Menu' to see options.")
+            else:
+                send_message(from_number, "⚠️ I didn’t understand that. Type 'menu' to start again.")
 
     except Exception as e:
-        logging.error(f"❌ Error processing webhook: {str(e)}")
+        print(f"❌ Error processing webhook: {e}")
 
-    return JSONResponse(content={"status": "ok"})
+    return JSONResponse(content={"status": "received"})
 
-# --- Startup Log ---
+# -------------------------
+# Startup log
+# -------------------------
 @app.on_event("startup")
 async def startup_event():
-    logging.info("🚀 JibuJob WhatsApp Bot is up and running on Day 4 ✅")
+    print("🚀 JibuJob WhatsApp bot (Day 4) is live and running.")
