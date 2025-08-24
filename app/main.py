@@ -9,12 +9,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("jibujob")
 
 # Load environment variables
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v22.0")
 
 # Validate env vars early
-if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
-    raise ValueError("Missing one or more required environment variables: WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID")
+if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
+    raise ValueError("Missing one or more required environment variables: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID")
 
 # FastAPI app
 app = FastAPI()
@@ -27,7 +29,7 @@ def send_whatsapp_message(to: str, message: str):
     """
     Send a WhatsApp message using the Meta WhatsApp Cloud API.
     """
-    url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    url = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json"
