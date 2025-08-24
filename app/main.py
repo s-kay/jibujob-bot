@@ -110,9 +110,9 @@ async def receive_webhook(request: Request):
             sender = message["from"]
             text = message["text"]["body"].strip()
 
-            # Extract user name if available
-            profile = entry.get("contacts", [{}])[0].get("profile", {})
-            user_name = profile.get("name", "there")
+            # ✅ Extract user name properly
+            contacts = value.get("contacts", [])
+            user_name = contacts[0].get("profile", {}).get("name", "there") if contacts else "there"
 
             text = message.get("text", {}).get("body", "").strip().lower()
             print(f"📩 Message from {sender} ({user_name}): {text}")
