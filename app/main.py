@@ -93,19 +93,25 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 "Do you still want those listings, or would you like to change?"
             )
         else:
-            reply = "🔎 Which type of job are you interested in?"
+            reply = "🔎 Which type of job are you interested in? (e.g., Software Developer, Accountant)"
         await send_whatsapp_message(from_number, reply)
         return
 
     if state["menu"] == "jobs" and message_text not in ["1","2","3","4","0"]:
         if message_text in ["yes", "y"]:
-            reply = f"Here are the latest {state['job_interest']} jobs 👇\nhttps://jobs.example.com/{state['job_interest'].replace(' ', '-')}"
+            reply = (
+                f"Here are the latest *{state['job_interest']}* jobs 👇\n"
+                f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}"
+            )
         elif message_text in ["no", "n"]:
             state["job_interest"] = None
             reply = "Okay, what new type of job are you interested in?"
         else:
             state["job_interest"] = message_text
-            reply = f"Got it ✅ — I’ll track *{message_text}* jobs for you!"
+            reply = (
+                f"Got it ✅ — I’ll track *{message_text}* jobs for you!\n"
+                f"Would you like to see some *{message_text}* listings now? (yes/no)"
+            )
         await send_whatsapp_message(from_number, reply)
         return
 
@@ -124,13 +130,19 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
 
     if state["menu"] == "training" and message_text not in ["1","2","3","4","0"]:
         if message_text in ["yes", "y"]:
-            reply = f"Here’s your *{state['training_interest']}* training link 👇\nhttps://training.example.com/{state['training_interest'].replace(' ', '-')}"
+            reply = (
+                f"Here’s your *{state['training_interest']}* training module 👇\n"
+                f"https://training.example.com/{state['training_interest'].replace(' ', '-')}"
+            )
         elif message_text in ["no", "n"]:
             state["training_interest"] = None
             reply = "Okay, what new training module are you interested in?"
         else:
             state["training_interest"] = message_text
-            reply = f"Perfect ✅ — I’ll guide you through *{message_text}* training!"
+            reply = (
+                f"Perfect ✅ — I’ll guide you through *{message_text}* training!\n"
+                f"Do you want to access the *{message_text}* course now? (yes/no)"
+            )
         await send_whatsapp_message(from_number, reply)
         return
 
@@ -149,13 +161,19 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
 
     if state["menu"] == "mentorship" and message_text not in ["1","2","3","4","0"]:
         if message_text in ["yes", "y"]:
-            reply = f"Here’s your *{state['mentorship_interest']}* mentorship info 👇\nhttps://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}"
+            reply = (
+                f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
+                f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}"
+            )
         elif message_text in ["no", "n"]:
             state["mentorship_interest"] = None
             reply = "Okay, what type of mentor would you like now?"
         else:
             state["mentorship_interest"] = message_text
-            reply = f"Nice ✅ — I’ll connect you with *{message_text}* mentors!"
+            reply = (
+                f"Nice ✅ — I’ll connect you with *{message_text}* mentors!\n"
+                f"Would you like to browse *{message_text}* mentor profiles now? (yes/no)"
+            )
         await send_whatsapp_message(from_number, reply)
         return
 
@@ -168,19 +186,31 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 "Do you still want that, or would you like to change?"
             )
         else:
-            reply = "💡 Which micro-entrepreneurship area interests you? (e.g., Freelancing, Agribusiness, E-commerce)"
+            reply = (
+                "💡 Which micro-entrepreneurship area interests you?\n"
+                "Options: Freelancing, Agribusiness, E-commerce, Crafts, Digital Services"
+            )
         await send_whatsapp_message(from_number, reply)
         return
 
     if state["menu"] == "entrepreneurship" and message_text not in ["1","2","3","4","0"]:
         if message_text in ["yes", "y"]:
-            reply = f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\nhttps://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}"
+            reply = (
+                f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
+                f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
+                "📖 Startup Guide: https://biz.example.com/guides\n"
+                "💰 Funding Opportunities: https://biz.example.com/funding\n"
+                "📂 Business Templates: https://biz.example.com/templates"
+            )
         elif message_text in ["no", "n"]:
             state["entrepreneurship_interest"] = None
             reply = "Okay, what new business area are you interested in?"
         else:
             state["entrepreneurship_interest"] = message_text
-            reply = f"Great ✅ — I’ll show you resources for *{message_text}*!"
+            reply = (
+                f"Great ✅ — I’ll show you resources for *{message_text}*!\n"
+                f"Do you want me to fetch *{message_text}* resources now? (yes/no)"
+            )
         await send_whatsapp_message(from_number, reply)
         return
 
@@ -211,10 +241,10 @@ async def verify_webhook(request: Request):
 
 @app.post("/webhook")
 async def webhook_handler(request: Request):
-    data = await request.json()
-    logging.info(f"Incoming webhook data: {data}")
-
     try:
+        data = await request.json()
+        logging.info(f"Incoming webhook data: {data}")
+
         if "entry" in data:
             for entry in data["entry"]:
                 for change in entry.get("changes", []):
