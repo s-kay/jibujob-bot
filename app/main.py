@@ -1,13 +1,13 @@
 import os
-import requests
 import logging
+import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-import httpx
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# ==============================
+# Config & Setup
+# ==============================
+app = FastAPI()
 
 # Configuration
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
@@ -21,30 +21,35 @@ if not WHATSAPP_TOKEN:
 if not WHATSAPP_PHONE_ID:
     raise RuntimeError("❌ Missing WHATSAPP_PHONE_ID in environment.")
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
 
-# Initialize FastAPI app
-app = FastAPI()
 
-# In-memory user sessions
-user_sessions = {}
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.info("🚀 Day 4 WhatsApp bot starting...")
 
-mock_jobs = {
-    "tech": [
-        {"title": "Junior Software Developer", "company": "Nairobi Tech Hub"},
-        {"title": "Cloud Engineer Intern", "company": "Safaricom"},
-    ],
-    "finance": [
-        {"title": "Accounting Assistant", "company": "Equity Bank"},
-        {"title": "Financial Analyst Trainee", "company": "KCB Group"},
-    ],
-    "general": [
-        {"title": "Customer Service Representative", "company": "Kenya Airways"},
-        {"title": "Logistics Assistant", "company": "DHL Nairobi"},
-    ]
+# ==============================
+# Mock Data
+# ==============================
+job_listings = [
+    {"title": "Solar Technician", "location": "Nairobi", "type": "Full-time"},
+    {"title": "Agribusiness Officer", "location": "Kisumu", "type": "Contract"},
+    {"title": "Digital Marketing Intern", "location": "Remote", "type": "Internship"},
+    {"title": "Community Health Worker", "location": "Mombasa", "type": "Part-time"},
+]
+
+training_modules = {
+    "1": ["Basic ICT Skills", "Introduction to Solar Installation", "Agribusiness 101"],
+    "2": ["Intermediate Web Development", "Mobile Money Operations", "Community Healthcare Basics"],
+    "3": ["Advanced AI Skills", "Entrepreneurship & Startups", "Renewable Energy Systems"],
 }
 
+mentors = [
+    {"name": "Alice", "expertise": "Agribusiness"},
+    {"name": "Brian", "expertise": "Software Development"},
+    {"name": "Cynthia", "expertise": "Renewable Energy"},
+]
+
+# Session state memory (user_id → state)
+user_sessions = {}
 
 # -------------------------
 # Helper: send message
@@ -65,19 +70,19 @@ def send_message(to, text):
         print(f"❌ Error sending message: {response.text}")
     return response.json()
 
-# -------------------------
-# Helper: main menu
-# -------------------------
 def get_main_menu():
     return (
-        "👋 Welcome to *JibuJob*! Please choose an option:\n\n"
-        "1️⃣ Jobs\n"
-        "2️⃣ Mentorship\n"
-        "3️⃣ Skills Training\n"
-        "4️⃣ Micro-entrepreneurship\n\n"
-        "Type the number of your choice."
+        "👋 Welcome to JibuJob Career Bot!\n"
+        "Please choose an option:\n\n"
+        "1️⃣ Job Listings\n"
+        "2️⃣ Training Modules\n"
+        "3️⃣ Mentorship\n"
+        "0️⃣ Exit"
     )
 
+# ==============================
+# Webhook Endpoints
+# ==============================
 # Webhook verification
 @app.get("/webhook")
 async def verify(request: Request):
@@ -86,86 +91,82 @@ async def verify(request: Request):
         return JSONResponse(content=int(params.get("hub.challenge", 0)), status_code=200)
     return JSONResponse(content="Invalid verification token", status_code=403)
 
-# -------------------------
-# Webhook message handling
-# -------------------------
+
+
 @app.post("/webhook")
-async def webhook(request: Request):
+async def receive_webhook(request: Request):
+    """Handle incoming messages."""
     data = await request.json()
+    logging.info(f"📩 Incoming: {data}")
+
     try:
-        entry = data["entry"][0]["changes"][0]["value"]
-        messages = entry.get("messages")
+        entry = data["entry"][0]
+        changes = entry["changes"][0]
+        value = changes["value"]
+        messages = value.get("messages")
 
         if messages:
-            msg = messages[0]
-            from_number = msg["from"]
+            message = messages[0]
+            sender = message["from"]
+            text = message["text"]["body"].strip()
 
-            # Extract user name if available
-            profile = entry.get("contacts", [{}])[0].get("profile", {})
-            user_name = profile.get("name", "there")
+            # Check user session state
+            state = user_sessions.get(sender, {"step": "menu"})
 
-            text = msg.get("text", {}).get("body", "").strip().lower()
-            print(f"📩 Message from {from_number} ({user_name}): {text}")
+            if text == "0":
+                send_message(sender, "👋 Goodbye! Type 'hi' to start again anytime.")
+                user_sessions.pop(sender, None)
+                return {"status": "ok"}
 
-            # Initialize user session if new
-            if from_number not in user_sessions:
-                user_sessions[from_number] = {"stage": "menu", "interest": None}
-                send_message(from_number, f"Hi {user_name}! 👋")
-                send_message(from_number, get_main_menu())
-                return JSONResponse(content={"status": "new user greeted"})
+            if state["step"] == "menu":
+                if text == "1":
+                    # Job listings
+                    job_text = "📋 Job Listings:\n"
+                    for job in job_listings:
+                        job_text += f"- {job['title']} ({job['location']}, {job['type']})\n"
+                    job_text += "\nType 'menu' to go back."
+                    user_sessions[sender] = {"step": "menu"}
+                    send_message(sender, job_text)
 
-            # Handle back-to-menu
-            if text in ["menu", "back"]:
-                user_sessions[from_number]["stage"] = "menu"
-                send_message(from_number, get_main_menu())
-                return JSONResponse(content={"status": "returned to menu"})
+                elif text == "2":
+                    # Training categories
+                    module_text = "📚 Choose a training level:\n"
+                    module_text += "1. Beginner\n2. Intermediate\n3. Advanced"
+                    user_sessions[sender] = {"step": "training"}
+                    send_message(sender, module_text)
 
-            stage = user_sessions[from_number]["stage"]
+                elif text == "3":
+                    # Mentorship
+                    mentor_text = "🤝 Available Mentors:\n"
+                    for m in mentors:
+                        mentor_text += f"- {m['name']} ({m['expertise']})\n"
+                    mentor_text += "\nType 'menu' to go back."
+                    user_sessions[sender] = {"step": "menu"}
+                    send_message(sender, mentor_text)
 
-            # -------------------------
-            # Stage: menu
-            # -------------------------
-            if stage == "menu":
-                if text in ["1", "jobs"]:
-                    user_sessions[from_number]["stage"] = "jobs"
-                    send_message(
-                        from_number,
-                        "Great choice! Do you prefer *tech* jobs, *finance*, or *general* opportunities?"
-                    )
-                elif text in ["2", "mentorship"]:
-                    user_sessions[from_number]["stage"] = "mentorship"
-                    send_message(from_number, "🌱 Mentorship is coming soon! Type 'menu' to return.")
-                elif text in ["3", "skills training"]:
-                    user_sessions[from_number]["stage"] = "training"
-                    send_message(from_number, "📘 Skills training modules will be available soon!")
-                elif text in ["4", "micro-entrepreneurship"]:
-                    user_sessions[from_number]["stage"] = "entrepreneurship"
-                    send_message(from_number, "🚀 Micro-entrepreneurship resources are coming soon!")
                 else:
-                    send_message(from_number, "❌ Invalid choice. Please select again:\n\n" + get_main_menu())
+                    send_message(sender, get_main_menu())
 
-            # -------------------------
-            # Stage: jobs
-            # -------------------------
-            elif stage == "jobs":
-                if text in mock_jobs:
-                    user_sessions[from_number]["interest"] = text
-                    jobs = mock_jobs[text]
-                    job_list = "\n".join([f"- {j['title']} at {j['company']}" for j in jobs])
-                    send_message(from_number, f"Here are some {text} jobs:\n\n{job_list}\n\nType 'menu' to go back.")
+            elif state["step"] == "training":
+                if text in training_modules:
+                    selected = training_modules[text]
+                    course_text = f"📚 {['Beginner','Intermediate','Advanced'][int(text)-1]} Modules:\n"
+                    for c in selected:
+                        course_text += f"- {c}\n"
+                    course_text += "\nType 'menu' to return."
+                    user_sessions[sender] = {"step": "menu"}
+                    send_message(sender, course_text)
                 else:
-                    send_message(
-                        from_number,
-                        "❌ Please type 'tech', 'finance', or 'general' to see jobs. Or type 'menu' to return."
-                    )
+                    send_message(sender, "❌ Invalid choice. Type 1, 2, or 3.")
 
-            else:
-                send_message(from_number, "⚠️ I didn’t understand that. Type 'menu' to start again.")
+            elif text.lower() == "menu" or text.lower() == "hi":
+                send_message(sender, get_main_menu())
+                user_sessions[sender] = {"step": "menu"}
 
     except Exception as e:
-        print(f"❌ Error processing webhook: {e}")
+        logging.error(f"❌ Error handling webhook: {e}")
 
-    return JSONResponse(content={"status": "received"})
+    return {"status": "ok"}
 
 # -------------------------
 # Startup log
