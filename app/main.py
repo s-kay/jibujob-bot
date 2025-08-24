@@ -20,7 +20,17 @@ if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
 GRAPH_API_URL = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
 
 # --- Simple in-memory state store ---
-user_state = {}  # { phone_number: {"menu": "jobs", "job_interest": "..."} }
+user_state = {}  # { phone_number: {...} }
+
+# --- Constants ---
+MAIN_MENU = (
+    "Please choose an option:\n\n"
+    "1️⃣ Job Listings\n"
+    "2️⃣ Training Modules\n"
+    "3️⃣ Mentorship\n"
+    "4️⃣ Micro-entrepreneurship\n"
+    "0️⃣ Exit"
+)
 
 # --- Utils ---
 async def send_whatsapp_message(to: str, message: str):
@@ -67,12 +77,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         reply = (
             f"Hi {user_name}! 👋\n\n"
             "👋 Welcome to JibuJob Career Bot!\n"
-            "Please choose an option:\n\n"
-            "1️⃣ Job Listings\n"
-            "2️⃣ Training Modules\n"
-            "3️⃣ Mentorship\n"
-            "4️⃣ Micro-entrepreneurship\n"
-            "0️⃣ Exit"
+            f"{MAIN_MENU}"
         )
         await send_whatsapp_message(from_number, reply)
         return
@@ -84,25 +89,27 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # Jobs flow
+    # --- Jobs flow ---
     if message_text == "1":
         state["menu"] = "jobs"
         if state["job_interest"]:
             reply = (
                 f"🔎 Last time you were interested in *{state['job_interest']}* jobs.\n"
-                "Do you still want those listings, or would you like to change?"
+                "Do you still want those listings? (yes/no)"
             )
         else:
             reply = "🔎 Which type of job are you interested in? (e.g., Software Developer, Accountant)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "jobs" and message_text not in ["1","2","3","4","0"]:
-        if message_text in ["yes", "y"]:
+    if state["menu"] == "jobs" and message_text not in ["1", "2", "3", "4", "0"]:
+        if message_text in ["yes", "y"] and state["job_interest"]:
             reply = (
                 f"Here are the latest *{state['job_interest']}* jobs 👇\n"
-                f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}"
+                f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
         elif message_text in ["no", "n"]:
             state["job_interest"] = None
             reply = "Okay, what new type of job are you interested in?"
@@ -115,25 +122,27 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # Training flow
+    # --- Training flow ---
     if message_text == "2":
         state["menu"] = "training"
         if state["training_interest"]:
             reply = (
                 f"📚 Last time you chose *{state['training_interest']}* training.\n"
-                "Do you still want that, or would you like to change?"
+                "Do you still want that? (yes/no)"
             )
         else:
             reply = "📚 Which training module are you interested in? (e.g., Digital Skills, Entrepreneurship)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "training" and message_text not in ["1","2","3","4","0"]:
-        if message_text in ["yes", "y"]:
+    if state["menu"] == "training" and message_text not in ["1", "2", "3", "4", "0"]:
+        if message_text in ["yes", "y"] and state["training_interest"]:
             reply = (
                 f"Here’s your *{state['training_interest']}* training module 👇\n"
-                f"https://training.example.com/{state['training_interest'].replace(' ', '-')}"
+                f"https://training.example.com/{state['training_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
         elif message_text in ["no", "n"]:
             state["training_interest"] = None
             reply = "Okay, what new training module are you interested in?"
@@ -146,25 +155,27 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # Mentorship flow
+    # --- Mentorship flow ---
     if message_text == "3":
         state["menu"] = "mentorship"
         if state["mentorship_interest"]:
             reply = (
                 f"🤝 Last time you wanted a *{state['mentorship_interest']}* mentor.\n"
-                "Do you still want that, or would you like to change?"
+                "Do you still want that? (yes/no)"
             )
         else:
             reply = "🤝 What type of mentorship are you looking for? (e.g., Tech, Business, Career)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "mentorship" and message_text not in ["1","2","3","4","0"]:
-        if message_text in ["yes", "y"]:
+    if state["menu"] == "mentorship" and message_text not in ["1", "2", "3", "4", "0"]:
+        if message_text in ["yes", "y"] and state["mentorship_interest"]:
             reply = (
                 f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
-                f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}"
+                f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
         elif message_text in ["no", "n"]:
             state["mentorship_interest"] = None
             reply = "Okay, what type of mentor would you like now?"
@@ -177,13 +188,13 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # Micro-entrepreneurship flow
+    # --- Micro-entrepreneurship flow ---
     if message_text == "4":
         state["menu"] = "entrepreneurship"
         if state["entrepreneurship_interest"]:
             reply = (
                 f"💡 Last time you were exploring *{state['entrepreneurship_interest']}* opportunities.\n"
-                "Do you still want that, or would you like to change?"
+                "Do you still want that? (yes/no)"
             )
         else:
             reply = (
@@ -193,15 +204,17 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "entrepreneurship" and message_text not in ["1","2","3","4","0"]:
-        if message_text in ["yes", "y"]:
+    if state["menu"] == "entrepreneurship" and message_text not in ["1", "2", "3", "4", "0"]:
+        if message_text in ["yes", "y"] and state["entrepreneurship_interest"]:
             reply = (
                 f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
                 f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
                 "📖 Startup Guide: https://biz.example.com/guides\n"
                 "💰 Funding Opportunities: https://biz.example.com/funding\n"
-                "📂 Business Templates: https://biz.example.com/templates"
+                "📂 Business Templates: https://biz.example.com/templates\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
         elif message_text in ["no", "n"]:
             state["entrepreneurship_interest"] = None
             reply = "Okay, what new business area are you interested in?"
@@ -214,15 +227,10 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # Fallback
+    # --- Fallback ---
     reply = (
         "❓ I didn’t understand that.\n\n"
-        "Please choose an option:\n"
-        "1️⃣ Job Listings\n"
-        "2️⃣ Training Modules\n"
-        "3️⃣ Mentorship\n"
-        "4️⃣ Micro-entrepreneurship\n"
-        "0️⃣ Exit"
+        f"{MAIN_MENU}"
     )
     await send_whatsapp_message(from_number, reply)
 
@@ -235,7 +243,7 @@ async def verify_webhook(request: Request):
         and params.get("hub.verify_token") == VERIFY_TOKEN
     ):
         logging.info("Webhook verified successfully.")
-        return JSONResponse(content=int(params.get("hub.challenge", 0)))
+        return JSONResponse(content=int(params.get("hub.challenge", "0")), status_code=200)
     logging.warning("Webhook verification failed.")
     return JSONResponse(content="Verification failed", status_code=403)
 
