@@ -26,6 +26,9 @@ logging.basicConfig(level=logging.INFO)
 # Initialize FastAPI app
 app = FastAPI()
 
+# In-memory user sessions
+user_sessions = {}
+
 # Mock dataset for job listings
 mock_jobs = [
     {"title": "Software Engineer", "company": "Safaricom", "location": "Nairobi", "apply_link": "https://safaricom.co.ke/careers"},
@@ -76,30 +79,66 @@ async def webhook(request: Request):
             if changes:
                 value = changes[0].get("value", {})
                 messages = value.get("messages", [])
+                contacts = value.get("contacts", [])
+
                 if messages:
                     phone_number = messages[0]["from"]
                     user_text = messages[0]["text"]["body"].strip().lower()
+                    user_name = contacts[0]["profile"]["name"] if contacts else "there"
 
-                    # Menu responses
+                    # Initialize session if first time
+                    if phone_number not in user_sessions:
+                        user_sessions[phone_number] = {"step": "menu"}
+                        await send_message(
+                            phone_number,
+                            f"👋 Hi {user_name}, welcome to JibuJob!\nReply 'Menu' to see your options."
+                        )
+                        return {"status": "new user greeted"}
+
+                    # Retrieve last step
+                    session = user_sessions[phone_number]
+
+                    # Main menu
                     if user_text in ["hi", "menu", "hello"]:
                         menu = (
-                            "👋 Welcome to JibuJob!\n\n"
-                            "Please choose an option:\n"
+                            "📋 *Main Menu*\n\n"
                             "1️⃣ Job Listings\n"
                             "2️⃣ Training Resources\n"
                             "3️⃣ Mentorship Connections"
                         )
+                        user_sessions[phone_number]["step"] = "menu"
                         await send_message(phone_number, menu)
 
+                    # Job listings
                     elif user_text.startswith("1") or "job" in user_text:
-                        job_list = "\n\n".join([f"💼 {job['title']} at {job['company']} ({job['location']})\nApply: {job['apply_link']}" for job in mock_jobs])
-                        await send_message(phone_number, f"Here are some opportunities:\n\n{job_list}")
+                        job_list = "\n".join(
+                            [f"{idx+1}. {job['title']} at {job['company']} ({job['location']})"
+                             for idx, job in enumerate(mock_jobs)]
+                        )
+                        reply = f"💼 Available Jobs:\n\n{job_list}\n\n👉 Reply with a job number to see details."
+                        user_sessions[phone_number]["step"] = "job_list"
+                        await send_message(phone_number, reply)
+
+                    # Handle job details if user previously asked for jobs
+                    elif session.get("step") == "job_list" and user_text.isdigit():
+                        idx = int(user_text) - 1
+                        if 0 <= idx < len(mock_jobs):
+                            job = mock_jobs[idx]
+                            reply = (
+                                f"💼 *{job['title']}*\n"
+                                f"🏢 {job['company']}\n"
+                                f"📍 {job['location']}\n"
+                                f"🔗 Apply here: {job['apply_link']}"
+                            )
+                            await send_message(phone_number, reply)
+                        else:
+                            await send_message(phone_number, "⚠️ Invalid choice. Please select a valid job number.")
 
                     elif user_text.startswith("2") or "train" in user_text:
                         resources = (
                             "📚 Free Training Resources:\n"
                             "- Microsoft Learn: https://learn.microsoft.com/\n"
-                            "- Coursera (Free Courses): https://coursera.org\n"
+                            "- Coursera: https://coursera.org\n"
                             "- ALX Africa: https://www.alxafrica.com/"
                         )
                         await send_message(phone_number, resources)
@@ -107,13 +146,13 @@ async def webhook(request: Request):
                     elif user_text.startswith("3") or "mentor" in user_text:
                         mentorship = (
                             "🤝 Mentorship Program:\n"
-                            "We can connect you with industry mentors in Tech, Business, and Design.\n"
-                            "Reply with your area of interest to get started."
+                            "We can connect you with mentors in Tech, Business, and Design.\n"
+                            "Reply with your area of interest."
                         )
                         await send_message(phone_number, mentorship)
 
                     else:
-                        await send_message(phone_number, "❓ Sorry, I didn’t understand. Please reply with 'Menu' to see options.")
+                        await send_message(phone_number, "❓ I didn’t understand. Please reply with 'Menu' to see options.")
 
     except Exception as e:
         logging.error(f"❌ Error processing webhook: {str(e)}")
@@ -123,4 +162,4 @@ async def webhook(request: Request):
 # --- Startup Log ---
 @app.on_event("startup")
 async def startup_event():
-    logging.info("🚀 JibuJob WhatsApp Bot is up and running on Day 3 ✅")
+    logging.info("🚀 JibuJob WhatsApp Bot is up and running on Day 4 ✅")
