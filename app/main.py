@@ -110,6 +110,13 @@ async def receive_webhook(request: Request):
             sender = message["from"]
             text = message["text"]["body"].strip()
 
+            # Extract user name if available
+            profile = entry.get("contacts", [{}])[0].get("profile", {})
+            user_name = profile.get("name", "there")
+
+            text = message.get("text", {}).get("body", "").strip().lower()
+            print(f"📩 Message from {sender} ({user_name}): {text}")
+
             # Check user session state
             state = user_sessions.get(sender, {"step": "menu"})
 
@@ -118,6 +125,14 @@ async def receive_webhook(request: Request):
                 user_sessions.pop(sender, None)
                 return {"status": "ok"}
 
+            # Initialize user state if new
+            if sender not in user_sessions:
+                user_sessions[sender] = {"step": "menu", "interest": None}
+                send_message(sender, f"Hi {user_name}! 👋")
+                send_message(sender, get_main_menu())
+                return JSONResponse(content={"status": "new user greeted"})
+
+            # Handle back-to-menu
             if state["step"] == "menu":
                 if text == "1":
                     # Job listings
