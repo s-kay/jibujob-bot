@@ -77,14 +77,9 @@ def get_main_menu():
 @app.get("/webhook")
 async def verify_webhook(request: Request):
     params = request.query_params
-    mode = params.get("hub.mode")
-    token = params.get("hub.verify_token")
-    challenge = params.get("hub.challenge")
-
-    if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("✅ Webhook verified.")
-        return JSONResponse(content=int(challenge))
-    return JSONResponse(content="Verification failed", status_code=403)
+    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
+        return JSONResponse(content=int(params.get("hub.challenge", 0)), status_code=200)
+    return JSONResponse(content="Invalid verification token", status_code=403)
 
 # -------------------------
 # Webhook message handling
