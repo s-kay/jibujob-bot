@@ -1,111 +1,162 @@
 import os
 import logging
-import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+import httpx
 
-# ==============================
-# Config & Setup
-# ==============================
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
 
-# Configuration
+# Load environment variables
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob-verify")
-GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v22.0")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "jibujob_verify")
 
-# Fail fast if critical ENV vars are missing
-if not WHATSAPP_TOKEN:
-    raise RuntimeError("❌ Missing WHATSAPP_TOKEN in environment.")
-if not WHATSAPP_PHONE_ID:
-    raise RuntimeError("❌ Missing WHATSAPP_PHONE_ID in environment.")
+if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
+    raise ValueError("Missing one or more required environment variables: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID")
 
+GRAPH_API_URL = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
 
+# --- Utils ---
+async def send_whatsapp_message(to: str, message: str):
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "text",
+        "text": {"body": message},
+    }
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(GRAPH_API_URL, headers=headers, json=payload)
+            response.raise_for_status()
+            logging.info(f"Message sent to {to}: {message}")
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Error sending message: {e.response.text}")
+        except Exception as e:
+            logging.error(f"Unexpected error: {str(e)}")
 
-# -------------------------------------------------
-# Helpers
-# -------------------------------------------------
-def format_main_menu(user_name: str) -> str:
-    """Return the main menu message with personalized greeting."""
-    return (
-        f"Hi {user_name}! 👋\n\n"
-        "👋 Welcome to JibuJob Career Bot!\n"
-        "Please choose an option:\n\n"
-        "1️⃣ Job Listings\n"
-        "2️⃣ Training Modules\n"
-        "3️⃣ Mentorship\n"
-        "4️⃣ Micro-entrepreneurship\n"
-        "0️⃣ Exit"
-    )
+# --- Handlers ---
+async def handle_message(from_number: str, user_name: str, message_text: str):
+    message_text = message_text.strip().lower()
 
-def handle_menu_choice(choice: str, user_name: str) -> str:
-    """Handle user menu choice."""
-    if choice == "1":
-        return "💼 Here are the latest *Job Listings*:\n\n- Software Engineer\n- Data Analyst\n- Sales Associate\n\nReply 0️⃣ to return to the main menu."
-    elif choice == "2":
-        return "📚 Choose a *Training Module*:\n\n1. Beginner\n2. Intermediate\n3. Advanced\n\nReply 0️⃣ to return to the main menu."
-    elif choice == "3":
-        return "🤝 *Mentorship* options:\n\n- Tech Career Guidance\n- Business Startups\n- Leadership Coaching\n\nReply 0️⃣ to return to the main menu."
-    elif choice == "4":
-        return "🚀 *Micro-entrepreneurship* opportunities:\n\n- Digital Marketing\n- Agribusiness\n- E-commerce\n\nReply 0️⃣ to return to the main menu."
-    elif choice == "0":
-        return "👋 Thank you for using JibuJob Career Bot. Goodbye!"
+    if message_text in ["hi", "hello", "start"]:
+        reply = (
+            f"Hi {user_name}! 👋\n\n"
+            "👋 Welcome to JibuJob Career Bot!\n"
+            "Please choose an option:\n\n"
+            "1️⃣ Job Listings\n"
+            "2️⃣ Training Modules\n"
+            "3️⃣ Mentorship\n"
+            "4️⃣ Micro-entrepreneurship\n"
+            "0️⃣ Exit"
+        )
+        await send_whatsapp_message(from_number, reply)
+
+    elif message_text == "1":
+        reply = (
+            "🔎 *Job Listings*\n\n"
+            "Here are some opportunities you might like:\n\n"
+            "• Software Developer (Remote) – Apply here: https://jobs.example.com/dev\n"
+            "• Marketing Intern (Nairobi) – Apply here: https://jobs.example.com/marketing\n"
+            "• Customer Support Agent – Apply here: https://jobs.example.com/support\n\n"
+            "👉 Reply with 'hi' anytime to return to the main menu."
+        )
+        await send_whatsapp_message(from_number, reply)
+
+    elif message_text == "2":
+        reply = (
+            "📚 *Training Modules*\n\n"
+            "Upskill yourself with our training:\n\n"
+            "• Digital Skills – https://training.example.com/digital\n"
+            "• Entrepreneurship – https://training.example.com/entrepreneurship\n"
+            "• Career Readiness – https://training.example.com/career\n\n"
+            "👉 Reply with 'hi' anytime to return to the main menu."
+        )
+        await send_whatsapp_message(from_number, reply)
+
+    elif message_text == "3":
+        reply = (
+            "🤝 *Mentorship*\n\n"
+            "Connect with experienced mentors:\n\n"
+            "• Tech Mentors – https://mentorship.example.com/tech\n"
+            "• Business Mentors – https://mentorship.example.com/business\n"
+            "• Career Coaches – https://mentorship.example.com/coaches\n\n"
+            "👉 Reply with 'hi' anytime to return to the main menu."
+        )
+        await send_whatsapp_message(from_number, reply)
+
+    elif message_text == "4":
+        reply = (
+            "💡 *Micro-entrepreneurship*\n\n"
+            "Explore small business opportunities:\n\n"
+            "• Online Freelancing – https://biz.example.com/freelance\n"
+            "• Agribusiness – https://biz.example.com/agri\n"
+            "• E-commerce – https://biz.example.com/ecommerce\n\n"
+            "👉 Reply with 'hi' anytime to return to the main menu."
+        )
+        await send_whatsapp_message(from_number, reply)
+
+    elif message_text == "0":
+        reply = "👋 Goodbye! Thank you for using JibuJob Career Bot. We wish you success!"
+        await send_whatsapp_message(from_number, reply)
+
     else:
-        return "❌ Invalid option. Please try again.\n\n" + format_main_menu(user_name)
+        reply = (
+            "❓ I didn’t understand that.\n\n"
+            "Please choose an option:\n"
+            "1️⃣ Job Listings\n"
+            "2️⃣ Training Modules\n"
+            "3️⃣ Mentorship\n"
+            "4️⃣ Micro-entrepreneurship\n"
+            "0️⃣ Exit"
+        )
+        await send_whatsapp_message(from_number, reply)
 
-# -------------------------------------------------
-# WhatsApp Webhook Verification
-# -------------------------------------------------
+# --- Webhook ---
 @app.get("/webhook")
-async def verify(request: Request):
-    params = request.query_params
-    if params.get("hub.mode") == "subscribe" and params.get("hub.verify_token") == VERIFY_TOKEN:
-        return JSONResponse(content=int(params.get("hub.challenge", 0)), status_code=200)
-    return JSONResponse(content="Invalid verification token", status_code=403)
+async def verify_webhook(request: Request):
+    params = dict(request.query_params)
+    if (
+        params.get("hub.mode") == "subscribe"
+        and params.get("hub.verify_token") == VERIFY_TOKEN
+    ):
+        logging.info("Webhook verified successfully.")
+        return JSONResponse(content=int(params.get("hub.challenge", 0)))
+    logging.warning("Webhook verification failed.")
+    return JSONResponse(content="Verification failed", status_code=403)
 
-# -------------------------------------------------
-# WhatsApp Message Receiver
-# -------------------------------------------------
 @app.post("/webhook")
-async def receive_message(request: Request):
+async def webhook_handler(request: Request):
     data = await request.json()
-    logger.info(f"Incoming webhook: {data}")
+    logging.info(f"Incoming webhook data: {data}")
 
     try:
-        # Extract user info
-        entry = data["entry"][0]
-        changes = entry["changes"][0]
-        value = changes["value"]
-        messages = value.get("messages")
+        if "entry" in data:
+            for entry in data["entry"]:
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
+                    messages = value.get("messages", [])
+                    contacts = value.get("contacts", [])
+                    if messages and contacts:
+                        msg = messages[0]
+                        contact = contacts[0]
+                        from_number = msg["from"]
+                        message_text = msg.get("text", {}).get("body", "")
+                        user_name = contact.get("profile", {}).get("name", "there")
 
-        if messages:
-            msg = messages[0]
-            user_name = msg.get("profile", {}).get("name", "there")
-            phone_number = msg["from"]
-            user_text = msg.get("text", {}).get("body", "").strip()
-
-            # Determine response
-            if user_text.lower() in ["hi", "hello", "menu", "start"]:
-                response_text = format_main_menu(user_name)
-            else:
-                response_text = handle_menu_choice(user_text, user_name)
-
-            logger.info(f"Replying to {phone_number}: {response_text}")
-
-            # Simulated response (replace with WhatsApp API call later)
-            return {"reply": response_text}
-
+                        await handle_message(from_number, user_name, message_text)
+        return JSONResponse(content={"status": "ok"})
     except Exception as e:
-        logger.error(f"Error handling message: {e}")
+        logging.error(f"Error handling webhook: {str(e)}")
+        return JSONResponse(content={"status": "error"}, status_code=500)
 
-    return {"status": "ok"}
-
-# ------------------------- 
-# # Startup log # ------------------------- 
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 JibuJob WhatsApp bot (Day 4) is live and running.")
+    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive messages.")
