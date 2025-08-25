@@ -75,7 +75,6 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     # Main Menu Greeting
     if message_text in ["hi", "hello", "start", "menu"]:
         state["menu"] = "main"
-        state["pending_flow"] = None
         reply = (
             f"Hi {user_name}! 👋\n\n"
             "👋 Welcome to JibuJob Career Bot!\n"
@@ -120,7 +119,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 state["pending_flow"] = None
                 reply = "Okay, what new type of job are you interested in?"
             else:
-                reply = "❓ Please reply with *yes* or *no*."
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["job_interest"] = message_text
             reply = (
@@ -159,7 +158,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 state["pending_flow"] = None
                 reply = "Okay, what new training module are you interested in?"
             else:
-                reply = "❓ Please reply with *yes* or *no*."
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["training_interest"] = message_text
             reply = (
@@ -198,7 +197,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 state["pending_flow"] = None
                 reply = "Okay, what type of mentor would you like now?"
             else:
-                reply = "❓ Please reply with *yes* or *no*."
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["mentorship_interest"] = message_text
             reply = (
@@ -243,7 +242,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
                 state["pending_flow"] = None
                 reply = "Okay, what new business area are you interested in?"
             else:
-                reply = "❓ Please reply with *yes* or *no*."
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["entrepreneurship_interest"] = message_text
             reply = (
