@@ -67,6 +67,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
             "training_interest": None,
             "mentorship_interest": None,
             "entrepreneurship_interest": None,
+            "pending_flow": None,  # track if user is being re-asked
         }
 
     state = user_state[from_number]
@@ -93,6 +94,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     if message_text == "1":
         state["menu"] = "jobs"
         if state["job_interest"]:
+            state["pending_flow"] = "jobs"
             reply = (
                 f"🔎 Last time you were interested in *{state['job_interest']}* jobs.\n"
                 "Do you still want those listings? (yes/no)"
@@ -103,16 +105,21 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         return
 
     if state["menu"] == "jobs" and message_text not in ["1", "2", "3", "4", "0"]:
-        if message_text in ["yes", "y"] and state["job_interest"]:
-            reply = (
-                f"Here are the latest *{state['job_interest']}* jobs 👇\n"
-                f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}\n\n"
-                f"{MAIN_MENU}"
-            )
-            state["menu"] = "main"
-        elif message_text in ["no", "n"]:
-            state["job_interest"] = None
-            reply = "Okay, what new type of job are you interested in?"
+        if state.get("pending_flow") == "jobs":
+            if message_text in ["yes", "y"]:
+                reply = (
+                    f"Here are the latest *{state['job_interest']}* jobs 👇\n"
+                    f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}\n\n"
+                    f"{MAIN_MENU}"
+                )
+                state["menu"] = "main"
+                state["pending_flow"] = None
+            elif message_text in ["no", "n"]:
+                state["job_interest"] = None
+                state["pending_flow"] = None
+                reply = "Okay, what new type of job are you interested in?"
+            else:
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["job_interest"] = message_text
             reply = (
@@ -126,6 +133,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     if message_text == "2":
         state["menu"] = "training"
         if state["training_interest"]:
+            state["pending_flow"] = "training"
             reply = (
                 f"📚 Last time you chose *{state['training_interest']}* training.\n"
                 "Do you still want that? (yes/no)"
@@ -136,16 +144,21 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         return
 
     if state["menu"] == "training" and message_text not in ["1", "2", "3", "4", "0"]:
-        if message_text in ["yes", "y"] and state["training_interest"]:
-            reply = (
-                f"Here’s your *{state['training_interest']}* training module 👇\n"
-                f"https://training.example.com/{state['training_interest'].replace(' ', '-')}\n\n"
-                f"{MAIN_MENU}"
-            )
-            state["menu"] = "main"
-        elif message_text in ["no", "n"]:
-            state["training_interest"] = None
-            reply = "Okay, what new training module are you interested in?"
+        if state.get("pending_flow") == "training":
+            if message_text in ["yes", "y"]:
+                reply = (
+                    f"Here’s your *{state['training_interest']}* training module 👇\n"
+                    f"https://training.example.com/{state['training_interest'].replace(' ', '-')}\n\n"
+                    f"{MAIN_MENU}"
+                )
+                state["menu"] = "main"
+                state["pending_flow"] = None
+            elif message_text in ["no", "n"]:
+                state["training_interest"] = None
+                state["pending_flow"] = None
+                reply = "Okay, what new training module are you interested in?"
+            else:
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["training_interest"] = message_text
             reply = (
@@ -159,6 +172,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     if message_text == "3":
         state["menu"] = "mentorship"
         if state["mentorship_interest"]:
+            state["pending_flow"] = "mentorship"
             reply = (
                 f"🤝 Last time you wanted a *{state['mentorship_interest']}* mentor.\n"
                 "Do you still want that? (yes/no)"
@@ -169,16 +183,21 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         return
 
     if state["menu"] == "mentorship" and message_text not in ["1", "2", "3", "4", "0"]:
-        if message_text in ["yes", "y"] and state["mentorship_interest"]:
-            reply = (
-                f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
-                f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}\n\n"
-                f"{MAIN_MENU}"
-            )
-            state["menu"] = "main"
-        elif message_text in ["no", "n"]:
-            state["mentorship_interest"] = None
-            reply = "Okay, what type of mentor would you like now?"
+        if state.get("pending_flow") == "mentorship":
+            if message_text in ["yes", "y"]:
+                reply = (
+                    f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
+                    f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}\n\n"
+                    f"{MAIN_MENU}"
+                )
+                state["menu"] = "main"
+                state["pending_flow"] = None
+            elif message_text in ["no", "n"]:
+                state["mentorship_interest"] = None
+                state["pending_flow"] = None
+                reply = "Okay, what type of mentor would you like now?"
+            else:
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["mentorship_interest"] = message_text
             reply = (
@@ -192,6 +211,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     if message_text == "4":
         state["menu"] = "entrepreneurship"
         if state["entrepreneurship_interest"]:
+            state["pending_flow"] = "entrepreneurship"
             reply = (
                 f"💡 Last time you were exploring *{state['entrepreneurship_interest']}* opportunities.\n"
                 "Do you still want that? (yes/no)"
@@ -205,19 +225,24 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         return
 
     if state["menu"] == "entrepreneurship" and message_text not in ["1", "2", "3", "4", "0"]:
-        if message_text in ["yes", "y"] and state["entrepreneurship_interest"]:
-            reply = (
-                f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
-                f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
-                "📖 Startup Guide: https://biz.example.com/guides\n"
-                "💰 Funding Opportunities: https://biz.example.com/funding\n"
-                "📂 Business Templates: https://biz.example.com/templates\n\n"
-                f"{MAIN_MENU}"
-            )
-            state["menu"] = "main"
-        elif message_text in ["no", "n"]:
-            state["entrepreneurship_interest"] = None
-            reply = "Okay, what new business area are you interested in?"
+        if state.get("pending_flow") == "entrepreneurship":
+            if message_text in ["yes", "y"]:
+                reply = (
+                    f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
+                    f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
+                    "📖 Startup Guide: https://biz.example.com/guides\n"
+                    "💰 Funding Opportunities: https://biz.example.com/funding\n"
+                    "📂 Business Templates: https://biz.example.com/templates\n\n"
+                    f"{MAIN_MENU}"
+                )
+                state["menu"] = "main"
+                state["pending_flow"] = None
+            elif message_text in ["no", "n"]:
+                state["entrepreneurship_interest"] = None
+                state["pending_flow"] = None
+                reply = "Okay, what new business area are you interested in?"
+            else:
+                reply = "Please reply with 'yes' or 'no'."
         else:
             state["entrepreneurship_interest"] = message_text
             reply = (
