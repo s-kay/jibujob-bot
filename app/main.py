@@ -67,14 +67,29 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
             "training_interest": None,
             "mentorship_interest": None,
             "entrepreneurship_interest": None,
-            "pending_flow": None,  # track if user is being re-asked
+            # explicit state flags
+            "awaiting_job_role": False,
+            "awaiting_job_confirm": False,
+            "awaiting_training_role": False,
+            "awaiting_training_confirm": False,
+            "awaiting_mentorship_role": False,
+            "awaiting_mentorship_confirm": False,
+            "awaiting_entrepreneurship_role": False,
+            "awaiting_entrepreneurship_confirm": False,
         }
 
     state = user_state[from_number]
 
+    # Reset all state flags helper
+    def reset_flags():
+        for key in state.keys():
+            if key.startswith("awaiting_"):
+                state[key] = False
+
     # Main Menu Greeting
     if message_text in ["hi", "hello", "start", "menu"]:
         state["menu"] = "main"
+        reset_flags()
         reply = (
             f"Hi {user_name}! 👋\n\n"
             "👋 Welcome to JibuJob Career Bot!\n"
@@ -93,130 +108,153 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
     # --- Jobs flow ---
     if message_text == "1":
         state["menu"] = "jobs"
+        reset_flags()
         if state["job_interest"]:
-            state["pending_flow"] = "jobs"
+            state["awaiting_job_confirm"] = True
             reply = (
                 f"🔎 Last time you were interested in *{state['job_interest']}* jobs.\n"
                 "Do you still want those listings? (yes/no)"
             )
         else:
+            state["awaiting_job_role"] = True
             reply = "🔎 Which type of job are you interested in? (e.g., Software Developer, Accountant)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "jobs" and message_text not in ["1", "2", "3", "4", "0"]:
-        if state.get("pending_flow") == "jobs":
-            if message_text in ["yes", "y"]:
-                reply = (
-                    f"Here are the latest *{state['job_interest']}* jobs 👇\n"
-                    f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}\n\n"
-                    f"{MAIN_MENU}"
-                )
-                state["menu"] = "main"
-                state["pending_flow"] = None
-            elif message_text in ["no", "n"]:
-                state["job_interest"] = None
-                state["pending_flow"] = None
-                reply = "Okay, what new type of job are you interested in?"
-            else:
-                reply = "Please reply with 'yes' or 'no'."
-        else:
-            state["job_interest"] = message_text
+    if state["awaiting_job_confirm"]:
+        if message_text in ["yes", "y"]:
             reply = (
-                f"Got it ✅ — I’ll track *{message_text}* jobs for you!\n"
-                f"Would you like to see some *{message_text}* listings now? (yes/no)"
+                f"Here are the latest *{state['job_interest']}* jobs 👇\n"
+                f"https://jobs.example.com/{state['job_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
+            reset_flags()
+        elif message_text in ["no", "n"]:
+            state["job_interest"] = None
+            reset_flags()
+            state["awaiting_job_role"] = True
+            reply = "Okay, what new type of job are you interested in?"
+        else:
+            reply = "Please reply with 'yes' or 'no'."
+        await send_whatsapp_message(from_number, reply)
+        return
+
+    if state["awaiting_job_role"]:
+        state["job_interest"] = message_text
+        reset_flags()
+        state["awaiting_job_confirm"] = True
+        reply = (
+            f"Got it ✅ — I’ll track *{message_text}* jobs for you!\n"
+            f"Would you like to see some *{message_text}* listings now? (yes/no)"
+        )
         await send_whatsapp_message(from_number, reply)
         return
 
     # --- Training flow ---
     if message_text == "2":
         state["menu"] = "training"
+        reset_flags()
         if state["training_interest"]:
-            state["pending_flow"] = "training"
+            state["awaiting_training_confirm"] = True
             reply = (
                 f"📚 Last time you chose *{state['training_interest']}* training.\n"
                 "Do you still want that? (yes/no)"
             )
         else:
+            state["awaiting_training_role"] = True
             reply = "📚 Which training module are you interested in? (e.g., Digital Skills, Entrepreneurship)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "training" and message_text not in ["1", "2", "3", "4", "0"]:
-        if state.get("pending_flow") == "training":
-            if message_text in ["yes", "y"]:
-                reply = (
-                    f"Here’s your *{state['training_interest']}* training module 👇\n"
-                    f"https://training.example.com/{state['training_interest'].replace(' ', '-')}\n\n"
-                    f"{MAIN_MENU}"
-                )
-                state["menu"] = "main"
-                state["pending_flow"] = None
-            elif message_text in ["no", "n"]:
-                state["training_interest"] = None
-                state["pending_flow"] = None
-                reply = "Okay, what new training module are you interested in?"
-            else:
-                reply = "Please reply with 'yes' or 'no'."
-        else:
-            state["training_interest"] = message_text
+    if state["awaiting_training_confirm"]:
+        if message_text in ["yes", "y"]:
             reply = (
-                f"Perfect ✅ — I’ll guide you through *{message_text}* training!\n"
-                f"Do you want to access the *{message_text}* course now? (yes/no)"
+                f"Here’s your *{state['training_interest']}* training module 👇\n"
+                f"https://training.example.com/{state['training_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
+            reset_flags()
+        elif message_text in ["no", "n"]:
+            state["training_interest"] = None
+            reset_flags()
+            state["awaiting_training_role"] = True
+            reply = "Okay, what new training module are you interested in?"
+        else:
+            reply = "Please reply with 'yes' or 'no'."
+        await send_whatsapp_message(from_number, reply)
+        return
+
+    if state["awaiting_training_role"]:
+        state["training_interest"] = message_text
+        reset_flags()
+        state["awaiting_training_confirm"] = True
+        reply = (
+            f"Perfect ✅ — I’ll guide you through *{message_text}* training!\n"
+            f"Do you want to access the *{message_text}* course now? (yes/no)"
+        )
         await send_whatsapp_message(from_number, reply)
         return
 
     # --- Mentorship flow ---
     if message_text == "3":
         state["menu"] = "mentorship"
+        reset_flags()
         if state["mentorship_interest"]:
-            state["pending_flow"] = "mentorship"
+            state["awaiting_mentorship_confirm"] = True
             reply = (
                 f"🤝 Last time you wanted a *{state['mentorship_interest']}* mentor.\n"
                 "Do you still want that? (yes/no)"
             )
         else:
+            state["awaiting_mentorship_role"] = True
             reply = "🤝 What type of mentorship are you looking for? (e.g., Tech, Business, Career)"
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "mentorship" and message_text not in ["1", "2", "3", "4", "0"]:
-        if state.get("pending_flow") == "mentorship":
-            if message_text in ["yes", "y"]:
-                reply = (
-                    f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
-                    f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}\n\n"
-                    f"{MAIN_MENU}"
-                )
-                state["menu"] = "main"
-                state["pending_flow"] = None
-            elif message_text in ["no", "n"]:
-                state["mentorship_interest"] = None
-                state["pending_flow"] = None
-                reply = "Okay, what type of mentor would you like now?"
-            else:
-                reply = "Please reply with 'yes' or 'no'."
-        else:
-            state["mentorship_interest"] = message_text
+    if state["awaiting_mentorship_confirm"]:
+        if message_text in ["yes", "y"]:
             reply = (
-                f"Nice ✅ — I’ll connect you with *{message_text}* mentors!\n"
-                f"Would you like to browse *{message_text}* mentor profiles now? (yes/no)"
+                f"Here’s your *{state['mentorship_interest']}* mentorship resources 👇\n"
+                f"https://mentorship.example.com/{state['mentorship_interest'].replace(' ', '-')}\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
+            reset_flags()
+        elif message_text in ["no", "n"]:
+            state["mentorship_interest"] = None
+            reset_flags()
+            state["awaiting_mentorship_role"] = True
+            reply = "Okay, what type of mentor would you like now?"
+        else:
+            reply = "Please reply with 'yes' or 'no'."
+        await send_whatsapp_message(from_number, reply)
+        return
+
+    if state["awaiting_mentorship_role"]:
+        state["mentorship_interest"] = message_text
+        reset_flags()
+        state["awaiting_mentorship_confirm"] = True
+        reply = (
+            f"Nice ✅ — I’ll connect you with *{message_text}* mentors!\n"
+            f"Would you like to browse *{message_text}* mentor profiles now? (yes/no)"
+        )
         await send_whatsapp_message(from_number, reply)
         return
 
     # --- Micro-entrepreneurship flow ---
     if message_text == "4":
         state["menu"] = "entrepreneurship"
+        reset_flags()
         if state["entrepreneurship_interest"]:
-            state["pending_flow"] = "entrepreneurship"
+            state["awaiting_entrepreneurship_confirm"] = True
             reply = (
                 f"💡 Last time you were exploring *{state['entrepreneurship_interest']}* opportunities.\n"
                 "Do you still want that? (yes/no)"
             )
         else:
+            state["awaiting_entrepreneurship_role"] = True
             reply = (
                 "💡 Which micro-entrepreneurship area interests you?\n"
                 "Options: Freelancing, Agribusiness, E-commerce, Crafts, Digital Services"
@@ -224,31 +262,36 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    if state["menu"] == "entrepreneurship" and message_text not in ["1", "2", "3", "4", "0"]:
-        if state.get("pending_flow") == "entrepreneurship":
-            if message_text in ["yes", "y"]:
-                reply = (
-                    f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
-                    f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
-                    "📖 Startup Guide: https://biz.example.com/guides\n"
-                    "💰 Funding Opportunities: https://biz.example.com/funding\n"
-                    "📂 Business Templates: https://biz.example.com/templates\n\n"
-                    f"{MAIN_MENU}"
-                )
-                state["menu"] = "main"
-                state["pending_flow"] = None
-            elif message_text in ["no", "n"]:
-                state["entrepreneurship_interest"] = None
-                state["pending_flow"] = None
-                reply = "Okay, what new business area are you interested in?"
-            else:
-                reply = "Please reply with 'yes' or 'no'."
-        else:
-            state["entrepreneurship_interest"] = message_text
+    if state["awaiting_entrepreneurship_confirm"]:
+        if message_text in ["yes", "y"]:
             reply = (
-                f"Great ✅ — I’ll show you resources for *{message_text}*!\n"
-                f"Do you want me to fetch *{message_text}* resources now? (yes/no)"
+                f"Here’s more info on *{state['entrepreneurship_interest']}* 👇\n"
+                f"https://biz.example.com/{state['entrepreneurship_interest'].replace(' ', '-')}\n\n"
+                "📖 Startup Guide: https://biz.example.com/guides\n"
+                "💰 Funding Opportunities: https://biz.example.com/funding\n"
+                "📂 Business Templates: https://biz.example.com/templates\n\n"
+                f"{MAIN_MENU}"
             )
+            state["menu"] = "main"
+            reset_flags()
+        elif message_text in ["no", "n"]:
+            state["entrepreneurship_interest"] = None
+            reset_flags()
+            state["awaiting_entrepreneurship_role"] = True
+            reply = "Okay, what new business area are you interested in?"
+        else:
+            reply = "Please reply with 'yes' or 'no'."
+        await send_whatsapp_message(from_number, reply)
+        return
+
+    if state["awaiting_entrepreneurship_role"]:
+        state["entrepreneurship_interest"] = message_text
+        reset_flags()
+        state["awaiting_entrepreneurship_confirm"] = True
+        reply = (
+            f"Great ✅ — I’ll show you resources for *{message_text}*!\n"
+            f"Do you want me to fetch *{message_text}* resources now? (yes/no)"
+        )
         await send_whatsapp_message(from_number, reply)
         return
 
@@ -299,4 +342,4 @@ async def webhook_handler(request: Request):
 
 @app.on_event("startup")
 async def startup_event():
-    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive message.")
+    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive messages.")
