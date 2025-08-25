@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import httpx
@@ -23,6 +24,7 @@ GRAPH_API_URL = f"https://graph.facebook.com/v22.0/{WHATSAPP_PHONE_ID}/messages"
 user_state = {}  # { phone_number: {...} }
 
 # --- Constants ---
+SESSION_TIMEOUT = 300  # 5 minutes
 MAIN_MENU = (
     "Please choose an option:\n\n"
     "1️⃣ Job Listings\n"
@@ -55,30 +57,47 @@ async def send_whatsapp_message(to: str, message: str):
         except Exception as e:
             logging.error(f"Unexpected error: {str(e)}")
 
+def is_session_expired(state: dict) -> bool:
+    """Check if the session has expired based on last_active timestamp."""
+    now = time.time()
+    last_active = state.get("last_active", now)
+    return (now - last_active) > SESSION_TIMEOUT
+
 # --- Handlers ---
 async def handle_message(from_number: str, user_name: str, message_text: str):
     message_text = message_text.strip().lower()
 
-    # Initialize state for new user
+    # Check or initialize user state
     if from_number not in user_state:
-        user_state[from_number] = {
-            "menu": "main",
-            "job_interest": None,
-            "training_interest": None,
-            "mentorship_interest": None,
-            "entrepreneurship_interest": None,
-            # explicit state flags
-            "awaiting_job_role": False,
-            "awaiting_job_confirm": False,
-            "awaiting_training_role": False,
-            "awaiting_training_confirm": False,
-            "awaiting_mentorship_role": False,
-            "awaiting_mentorship_confirm": False,
-            "awaiting_entrepreneurship_role": False,
-            "awaiting_entrepreneurship_confirm": False,
-        }
-
+        user_state[from_number] = {"menu": "main"}
     state = user_state[from_number]
+
+    # Expire session after timeout
+    if is_session_expired(state):
+        logging.info(f"Session expired for {from_number}, resetting state.")
+        user_state[from_number] = {"menu": "main"}
+        state = user_state[from_number]
+
+    # Update last activity timestamp
+    state["last_active"] = time.time()
+
+    # Initialize missing keys
+    defaults = {
+        "job_interest": None,
+        "training_interest": None,
+        "mentorship_interest": None,
+        "entrepreneurship_interest": None,
+        "awaiting_job_role": False,
+        "awaiting_job_confirm": False,
+        "awaiting_training_role": False,
+        "awaiting_training_confirm": False,
+        "awaiting_mentorship_role": False,
+        "awaiting_mentorship_confirm": False,
+        "awaiting_entrepreneurship_role": False,
+        "awaiting_entrepreneurship_confirm": False,
+    }
+    for k, v in defaults.items():
+        state.setdefault(k, v)
 
     # Reset all state flags helper
     def reset_flags():
@@ -105,7 +124,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # --- Jobs flow ---
+    # ---------------- JOBS FLOW ----------------
     if message_text == "1":
         state["menu"] = "jobs"
         reset_flags()
@@ -151,7 +170,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # --- Training flow ---
+    # ---------------- TRAINING FLOW ----------------
     if message_text == "2":
         state["menu"] = "training"
         reset_flags()
@@ -197,7 +216,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # --- Mentorship flow ---
+    # ---------------- MENTORSHIP FLOW ----------------
     if message_text == "3":
         state["menu"] = "mentorship"
         reset_flags()
@@ -243,7 +262,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # --- Micro-entrepreneurship flow ---
+    # ---------------- ENTREPRENEURSHIP FLOW ----------------
     if message_text == "4":
         state["menu"] = "entrepreneurship"
         reset_flags()
@@ -295,7 +314,7 @@ async def handle_message(from_number: str, user_name: str, message_text: str):
         await send_whatsapp_message(from_number, reply)
         return
 
-    # --- Fallback ---
+    # ---------------- FALLBACK ----------------
     reply = (
         "❓ I didn’t understand that.\n\n"
         f"{MAIN_MENU}"
