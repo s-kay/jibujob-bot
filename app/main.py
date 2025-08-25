@@ -299,4 +299,4 @@ async def webhook_handler(request: Request):
 
 @app.on_event("startup")
 async def startup_event():
-    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive messages.")
+    logging.info("🚀 JibuJob WhatsApp bot started successfully and is ready to receive message.")
