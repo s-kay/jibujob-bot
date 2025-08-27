@@ -2,64 +2,53 @@
 import httpx
 import logging
 from typing import List, Optional
-from .config import settings
 
-logger = logging.getLogger(__name__)
+# --- Enhanced Mock Job Database ---
+# This acts as our stand-in for a live API for now.
+MOCK_JOBS = {
+    "software developer": [
+        "Backend Developer (Supabase & API) at TechCorp KE (Remote)",
+        "Junior Python Developer at FinInnovate (Nairobi)",
+        "React Native Developer at Crystal Recruit (Remote, Contract)",
+        "Senior Full Stack Engineer at BlueCollar Ltd (Nairobi)",
+    ],
+    "accountant": [
+        "Reporting Accountant at CSS Ltd (Nairobi)",
+        "Finance and Accounting Executive at Eldoret Farms (Eldoret)",
+        "Accountant at Jocham Hospital (Mombasa)",
+        "Junior Accountant at Brites Management (Nairobi)",
+    ],
+    "sales": [
+        "Sales Executive (Interior Design) at CSS Ltd (Nairobi)",
+        "Regional Sales Lead at Trinova Technologies (Remote)",
+        "Independent Sales Executive at Ledger 360 (Remote, Commission)",
+    ],
+    "admin": [
+        "Remote Executive Assistant at People Edge (Remote)",
+        "Executive & Business Admin Assistant (Remote, US Hours)",
+        "ICT Coordinator at Bestlinks Talents Hub (Nairobi)",
+    ],
+}
 
-# The base URL for the job data aggregator API
-JOB_API_URL = "https://jobdataapi.com/api/jobs/"
 
 async def fetch_jobs(job_title: str, country_code: str = "KE") -> Optional[List[str]]:
     """
-    Fetches job listings from the jobdataapi.com aggregator.
-
-    Args:
-        job_title: The job role to search for (e.g., "accountant").
-        country_code: The ISO 3166-1 alpha-2 country code (e.g., "KE" for Kenya).
-
-    Returns:
-        A list of formatted job strings or None if an error occurs.
+    Fetches job listings. 
+    Currently uses an internal mock database.
+    This function is ready to be swapped with a live API call in the future.
     """
-    if not settings.JOB_API_KEY:
-        logger.warning("JOB_API_KEY is not set. Skipping API call and returning mock data.")
-        # Return a single mock result so the flow can be tested without a real key
-        if "developer" in job_title.lower():
-            return ["Mock: Senior Developer at KaziCorp - https://jobs.example.com/live1"]
-        return None
-
-    headers = {
-        "Authorization": f"Api-Key {settings.JOB_API_KEY}"
-    }
-    params = {
-        "query": job_title,
-        "country_code": country_code,
-        "page_size": 5 # Fetch 5 results at a time
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(JOB_API_URL, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-
-            if not data.get("results"):
-                logger.info(f"No jobs found for query: {job_title}")
-                return []
-
-            # Format the results into a user-friendly list of strings
-            formatted_jobs = []
-            for job in data["results"]:
-                company = job.get("company", {}).get("name", "N/A")
-                location = job.get("location", "N/A")
-                title = job.get("title", "N/A")
-                # We can't get a direct link, so we'll just present the info
-                formatted_jobs.append(f"{title} at {company} ({location})")
+    logging.info(f"Fetching mock jobs for query: '{job_title}'")
+    
+    # Simple search logic: find the best matching key in our mock database
+    best_match_key = None
+    for key in MOCK_JOBS:
+        if key in job_title.lower():
+            best_match_key = key
+            break
             
-            return formatted_jobs
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Error fetching jobs from API: {e.response.text}")
-            return None
-        except Exception as e:
-            logger.error(f"An unexpected error occurred while fetching jobs: {e}")
-            return None
+    if best_match_key:
+        return MOCK_JOBS[best_match_key]
+    
+    # If no direct match, return an empty list
+    logging.warning(f"No mock job category found for '{job_title}'")
+    return []
