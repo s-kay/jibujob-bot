@@ -15,17 +15,18 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./kazileo.db"
 
     # WhatsApp API configuration
-    WHATSAPP_TOKEN: str = ''
-    WHATSAPP_PHONE_ID: str = ''
-    VERIFY_TOKEN: str = ''
+    WHATSAPP_TOKEN: str = ""
+    WHATSAPP_PHONE_ID: str = ""
+    VERIFY_TOKEN: str = ""
 
-    # Job Aggregator API Key (add this to your .env file)
+    # External API Keys
     JOB_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
 
     # Derived variable for the Graph API URL
     @property
     def GRAPH_API_URL(self) -> str:
-        return f"https://graph.facebook.com/v20.0/{self.WHATSAPP_PHONE_ID}/messages"
+        return f"https://graph.facebook.com/v22.0/{self.WHATSAPP_PHONE_ID}/messages"
 
     # Session timeout in seconds (e.g., 5 minutes)
     SESSION_TIMEOUT: int = 300

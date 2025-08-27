@@ -4,22 +4,19 @@ from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-# Import modules from our application structure
 from . import models, crud, services
 from .database import engine, get_db
-from .config import settings
+from app.config import settings
 from pydantic import BaseModel, Field
 
-# --- Boilerplate: Create database tables on startup ---
 models.Base.metadata.create_all(bind=engine)
 
-# --- Configure Logging ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="KaziLeo WhatsApp Bot")
 
-# --- Pydantic Models for WhatsApp Webhook Validation ---
+# --- Pydantic Models for Webhook Validation ---
 class TextMessage(BaseModel):
     body: str
 
@@ -63,9 +60,6 @@ def read_root():
 
 @app.get("/webhook", tags=["Webhook"])
 async def verify_webhook(request: Request):
-    """
-    Handles the webhook verification request from Meta.
-    """
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")
     challenge = request.query_params.get("hub.challenge")
@@ -79,48 +73,35 @@ async def verify_webhook(request: Request):
 
 @app.post("/webhook", tags=["Webhook"])
 async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db)):
-    """
-    Handles incoming messages from WhatsApp users.
-    """
     try:
-        # The webhook sends a list of entries, but we typically only care about the first one.
         if not request.entry or not request.entry[0].changes:
-            logger.warning("Webhook received with no entries or changes.")
             return Response(status_code=200)
 
         change = request.entry[0].changes[0]
         value = change.value
 
-        # ** THE FIX IS HERE: Check if the notification is a user message **
         if value.messages and value.contacts:
             message = value.messages[0]
             contact = value.contacts[0]
 
-            # We only want to process incoming text messages for now
             if message.type != "text" or not message.text:
-                logger.info(f"Received non-text message type: {message.type}")
                 return Response(status_code=200)
 
             from_number = message.from_number
             user_name = contact.profile.name
             message_text = message.text.body
 
-            # Get or create the user's session from the database
-            session = crud.get_or_create_session(db, phone_number=from_number, user_name=user_name)
+            # Get session and is_new flag
+            session, is_new = crud.get_or_create_session(db, phone_number=from_number, user_name=user_name)
 
-            # Pass the session and message to the business logic handler
-            await services.process_message(db, session, message_text)
+            # Pass both to the business logic handler
+            await services.process_message(db, session, message_text, is_new_user=is_new)
             
-            # Commit any changes made to the session during processing
             crud.update_session(db, session)
         else:
-            # This handles other events like message status updates (sent, delivered, read)
-            logger.info(f"Received a non-message webhook event (e.g., status update).")
+            logger.info("Received a non-message webhook event.")
 
-    except (IndexError, KeyError) as e:
-        logger.warning(f"Could not parse webhook data: {e}. Payload: {request.dict()}")
     except Exception as e:
         logger.error(f"Error handling webhook: {e}", exc_info=True)
     
-    # Always return 200 OK to WhatsApp to acknowledge receipt
     return Response(status_code=200)

@@ -10,8 +10,7 @@ class UserSession(Base):
     """
     SQLAlchemy model for storing user session data.
 
-    Now includes specific fields for storing long-term user interests
-    across the different service flows.
+    Now includes a dedicated JSON field for the cover letter generator.
     """
     __tablename__ = "user_sessions"
 
@@ -24,6 +23,11 @@ class UserSession(Base):
     training_interest: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     mentorship_interest: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     entrepreneurship_interest: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # --- Feature Data ---
+    resume_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default={})
+    interview_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default={})
+    cover_letter_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default={})
 
     # --- Session State ---
     current_menu: Mapped[str] = mapped_column(String, default="main")

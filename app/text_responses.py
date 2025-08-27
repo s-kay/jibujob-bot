@@ -34,7 +34,12 @@ def get_main_menu() -> str:
         "1️⃣ **Find a new job**\n"
         "2️⃣ **Learn a new skill**\n"
         "3️⃣ **Connect with a mentor**\n"
-        "4️⃣ **Explore a business idea**\n\n"
+        "4️⃣ **Explore a business idea**\n"
+        "5️⃣ **Build a simple CV**\n"
+        "6️⃣ **AI Interview Practice**\n"
+        "7️⃣ **Generate a Cover Letter**\n"
+        "8️⃣ **Optimize My CV for a Job**\n"
+        "9️⃣ **Analyze Job Skills**\n\n"
         "Just reply with the number of your choice, or type '0' to reset."
     )
 
