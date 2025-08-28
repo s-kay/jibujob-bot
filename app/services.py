@@ -17,13 +17,21 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 state[key] = False
 
     # --- Universal Commands (Highest Priority) ---
-    if message_text in ["hi", "hello", "start", "menu"]:
+    sheng_greetings = ["niaje", "sasa", "vipi", "habari"]
+    
+    if message_text in ["hi", "hello", "start", "menu"] or any(greeting in message_text for greeting in sheng_greetings):
         session.current_menu = "main"
         reset_flags()
+        
+        # If it was a sheng greeting, give a sheng response first
+        if any(greeting in message_text for greeting in sheng_greetings):
+            await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_sheng_greeting_response())
+
         greeting, introduction = text_responses.get_greeting_parts(session.user_name, is_new_user=is_new_user)
         await whatsapp_client.send_whatsapp_message(session.phone_number, greeting)
         if introduction:
             await whatsapp_client.send_whatsapp_message(session.phone_number, introduction)
+        
         await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
@@ -34,6 +42,17 @@ async def process_message(db: Session, session: models.UserSession, message_text
         reply = "👋 Your session has been reset. Type 'hi' to start again with a fresh menu."
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
+        
+    # --- Keyword-based Routing (Hybrid NLP Model) ---
+    if session.current_menu == "main": # Only check for keywords if we are at the main menu
+        if "kazi" in message_text or "ajira" in message_text:
+            message_text = "1" # Reroute to jobs flow
+        elif "mafunzo" in message_text or "jifunze" in message_text or "kusoma" in message_text:
+            message_text = "2" # Reroute to training flow
+        elif "ushauri" in message_text:
+            message_text = "3" # Reroute to mentorship flow
+        elif "biashara" in message_text:
+            message_text = "4" # Reroute to entrepreneurship flow
 
     # --- Specialized Handlers (Second Priority) ---
     if state.get("awaiting_training_suggestion_confirm"):
