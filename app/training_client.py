@@ -6,11 +6,13 @@ from typing import List, Optional
 # This is now a single list, allowing for more flexible keyword searching.
 MOCK_TRAININGS_LIST = [
     # Digital Skills
-    "*Free Course: Intro to Digital Marketing* (Google)",
-    "*Learn Advanced Excel for Business* (Coursera)",
-    "*Social Media Management 101* (ALX)",
-    "*Graphic Design Basics with Canva* (YouTube)",
-    
+    "*FREE Digital Marketing & E-Commerce Training/Work Readiness/Mentorship* - https://ajiradigital.go.ke/#/activity/mombasa-kwashee-ayec-digital-marketing-e-commerce-training-mentorship-cohort-1-september-2025/TRAINING",
+    "*FREE Digital Marketing and E-Commerce Training / Work Readiness / Mentorship* -  https://ajiradigital.go.ke/#/activity/nyandarua-destiny-sanctuary-digital-marketing-training-mentorship-29th-1st-september-2025/TRAINING",
+    "*FREE online work readiness training and mentorship at Mukuru Slums Development Project*  - https://ajiradigital.go.ke/#/activity/nairobi-mukuru-slums-dev-project-digital-marketing-ecommerce-training-mentorship-9th-10th-s/TRAINING",
+    "*FREE Data Analysis using Excel Training/Mentorship* - https://ajiradigital.go.ke/#/activity/monday-1st-september-zoom-data-analysis-using-excel-training-mentorship/TRAINING?t=U2FsdGVkX193A7kp8R5MeJ1W2l6pz1WVZGtniATW2s24Llnc2ikwW0iHmLoN4Nzd7YZc60vI4fhiqBbDKh4qnpntIMwNNt%2BbU07%2FKsemdej4De5QDlJ1TatxnpudFD04xt7BkukZqXa6L0zkbSWzSSWM3I%2FdKOXvNFcWCt2qbP7ymROjdGSeaWlTxvDYMgV0",
+    "*FREE online work readiness training and mentorship at KIHBT Ngong*  - https://ajiradigital.go.ke/#/activity/kajiado-kihbt-ngong-digital-marketing-ecommerce-training-mentorship-4th-5th-sept-2025/TRAINING",
+
+
     # AI
     "*Introduction to AI Prompt Engineering* (Free)",
     "*AI for Everyone* by Andrew Ng (Coursera)",
