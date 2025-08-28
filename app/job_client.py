@@ -5,27 +5,27 @@ from typing import List, Optional
 
 # --- Enhanced Mock Job Database with REAL Data ---
 # This data is hardcoded but represents actual recent job listings from Kenyan job boards.
-# This makes the prototype experience much more realistic for pilot testers.
+# Job titles are now bolded for better presentation in WhatsApp.
 MOCK_JOBS = {
     "software developer": [
-        "Software Developer at Buy Domain Kenya - https://www.brightermonday.co.ke/listings/software-developer-4nznmv",
-        "Senior Full Stack Software Engineer at Bluecollar Technologies - https://www.brightermonday.co.ke/listings/senior-full-stack-software-engineer-d8kngv",
-        "Software Developer at Enfinite Solutions Limited - https://www.brightermonday.co.ke/listings/software-developer-20e0nq",
+        "*Software Developer* at Buy Domain Kenya - https://www.brightermonday.co.ke/listings/software-developer-4nznmv",
+        "*Senior Full Stack Software Engineer* at Bluecollar Technologies - https://www.brightermonday.co.ke/listings/senior-full-stack-software-engineer-d8kngv",
+        "*Software Developer* at Enfinite Solutions Limited - https://www.brightermonday.co.ke/listings/software-developer-20e0nq",
     ],
     "accountant": [
-        "Accountant at Burhani Engineers Ltd - https://www.fuzu.com/kenya/jobs/accountant-burhani-engineers-ltd",
-        "Project Accountant at Tatu City - https://www.fuzu.com/kenya/jobs/project-accountant-tatu-city",
-        "Senior Accountant at Kibabii University - https://www.fuzu.com/kenya/jobs/senior-accountant-kibabii-university-2",
+        "*Accountant* at Burhani Engineers Ltd - https://www.fuzu.com/kenya/jobs/accountant-burhani-engineers-ltd",
+        "*Project Accountant* at Tatu City - https://www.fuzu.com/kenya/jobs/project-accountant-tatu-city",
+        "*Senior Accountant* at Kibabii University - https://www.fuzu.com/kenya/jobs/senior-accountant-kibabii-university-2",
     ],
     "sales": [
-        "Sales Manager at Crystal Recruitment - https://www.brightermonday.co.ke/listings/sales-manager-vx8vjp",
-        "Wholesale Laptop Sales Agent at Kolm Solutions - https://www.brightermonday.co.ke/listings/wholesale-laptop-sales-agent-p5p8w5",
-        "Van Salesman at Focused Human Resource Solutions - https://www.brightermonday.co.ke/listings/van-salesman-q2n5wk",
+        "*Sales Manager* at Crystal Recruitment - https://www.brightermonday.co.ke/listings/sales-manager-vx8vjp",
+        "*Wholesale Laptop Sales Agent* at Kolm Solutions - https://www.brightermonday.co.ke/listings/wholesale-laptop-sales-agent-p5p8w5",
+        "*Van Salesman* at Focused Human Resource Solutions - https://www.brightermonday.co.ke/listings/van-salesman-q2n5wk",
     ],
     "admin": [
-        "Administrative Assistant at Oasis Outsourcing - https://www.fuzu.com/kenya/jobs/administrative-assistant-sk-oasis-outsourcing",
-        "Operations and Administration Assistant at WUSC - https://www.fuzu.com/kenya/jobs/operations-and-administration-assistant-wusc-nairobi",
-        "Personal Assistant, Finance & Operations Administrator at The Nairobi Women's Hospital - https://www.fuzu.com/kenya/jobs/personal-assistant-finance-operations-administrator",
+        "*Administrative Assistant* at Oasis Outsourcing - https://www.fuzu.com/kenya/jobs/administrative-assistant-sk-oasis-outsourcing",
+        "*Operations and Administration Assistant* at WUSC - https://www.fuzu.com/kenya/jobs/operations-and-administration-assistant-wusc-nairobi",
+        "*Personal Assistant, Finance & Operations Administrator* at The Nairobi Women's Hospital - https://www.fuzu.com/kenya/jobs/personal-assistant-finance-operations-administrator",
     ],
 }
 
