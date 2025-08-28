@@ -7,6 +7,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
     """
     Main business logic handler for processing user messages with persistence.
     """
+    message_text_original = message_text # Keep original case for saving, but use lower for logic
     message_text = message_text.strip().lower()
     state = session.session_data
 
@@ -66,12 +67,15 @@ async def process_message(db: Session, session: models.UserSession, message_text
     if message_text == "1" or session.current_menu == "jobs":
         session.current_menu = "jobs"
         if state.get("awaiting_job_role"):
-            session.job_interest = message_text
-            await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_empathetic_response("searching", interest=session.job_interest))
-            listings = await job_client.fetch_jobs(message_text)
-            reply = f"Great! I've saved your interest in *{session.job_interest}*.\n" + text_responses.get_empathetic_response("jobs_found" if listings else "no_jobs_found", listings=listings or [], interest=session.job_interest)
-            session.current_menu = "main"; reset_flags()
-            reply += f"\n\n{text_responses.get_main_menu()}"
+            if message_text.isdigit():
+                reply = "Please type a job role (e.g., 'Accountant'), not a number."
+            else:
+                session.job_interest = message_text_original
+                await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_empathetic_response("searching", interest=session.job_interest))
+                listings = await job_client.fetch_jobs(message_text)
+                reply = f"Great! I've saved your interest in *{session.job_interest}*.\n" + text_responses.get_empathetic_response("jobs_found" if listings else "no_jobs_found", listings=listings or [], interest=session.job_interest)
+                session.current_menu = "main"; reset_flags()
+                reply += f"\n\n{text_responses.get_main_menu()}"
         elif state.get("awaiting_job_confirm"):
             if message_text in ["yes", "y"]:
                 if session.job_interest:
@@ -83,9 +87,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 session.current_menu = "main"; reset_flags()
                 reply += f"\n\n{text_responses.get_main_menu()}"
             elif message_text in ["no", "n"]:
-                # THE FIX IS HERE: We now correctly manage the state transition
-                state.pop("awaiting_job_confirm", None)
-                state["awaiting_job_role"] = True
+                state.pop("awaiting_job_confirm", None); state["awaiting_job_role"] = True
                 reply = "No problem. What new job role are you looking for?"
             else: reply = "Please answer with 'yes' or 'no'."
         else:
@@ -98,11 +100,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
     elif message_text == "2" or session.current_menu == "training":
         session.current_menu = "training"
         if state.get("awaiting_training_role"):
-            session.training_interest = message_text
-            listings = await training_client.fetch_trainings(message_text)
-            reply = f"Great! I've saved your interest in *{session.training_interest}*.\n" + text_responses.get_empathetic_response("training_found" if listings else "no_training_found", listings=listings or [], interest=session.training_interest)
-            session.current_menu = "main"; reset_flags()
-            reply += f"\n\n{text_responses.get_main_menu()}"
+            if message_text.isdigit():
+                reply = "Please type a skill (e.g., 'Digital Skills'), not a number."
+            else:
+                session.training_interest = message_text_original
+                listings = await training_client.fetch_trainings(message_text)
+                reply = f"Great! I've saved your interest in *{session.training_interest}*.\n" + text_responses.get_empathetic_response("training_found" if listings else "no_training_found", listings=listings or [], interest=session.training_interest)
+                session.current_menu = "main"; reset_flags()
+                reply += f"\n\n{text_responses.get_main_menu()}"
         elif state.get("awaiting_training_confirm"):
             if message_text in ["yes", "y"]:
                 if session.training_interest:
@@ -112,8 +117,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 session.current_menu = "main"; reset_flags()
                 reply += f"\n\n{text_responses.get_main_menu()}"
             elif message_text in ["no", "n"]:
-                state.pop("awaiting_training_confirm", None)
-                state["awaiting_training_role"] = True
+                state.pop("awaiting_training_confirm", None); state["awaiting_training_role"] = True
                 reply = "Sounds good. What new skill are you interested in learning today?"
             else: reply = "Please answer with 'yes' or 'no'."
         else:
@@ -126,11 +130,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
     elif message_text == "3" or session.current_menu == "mentorship":
         session.current_menu = "mentorship"
         if state.get("awaiting_mentorship_role"):
-            session.mentorship_interest = message_text
-            listings = await mentorship_client.fetch_mentors(message_text)
-            reply = f"Perfect! I've saved your interest in *{session.mentorship_interest}*.\n" + text_responses.get_empathetic_response("mentors_found" if listings else "no_mentors_found", listings=listings or [], interest=session.mentorship_interest)
-            session.current_menu = "main"; reset_flags()
-            reply += f"\n\n{text_responses.get_main_menu()}"
+            if message_text.isdigit():
+                reply = "Please type a field (e.g., 'Tech'), not a number."
+            else:
+                session.mentorship_interest = message_text_original
+                listings = await mentorship_client.fetch_mentors(message_text)
+                reply = f"Perfect! I've saved your interest in *{session.mentorship_interest}*.\n" + text_responses.get_empathetic_response("mentors_found" if listings else "no_mentors_found", listings=listings or [], interest=session.mentorship_interest)
+                session.current_menu = "main"; reset_flags()
+                reply += f"\n\n{text_responses.get_main_menu()}"
         elif state.get("awaiting_mentorship_confirm"):
             if message_text in ["yes", "y"]:
                 if session.mentorship_interest:
@@ -140,8 +147,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 session.current_menu = "main"; reset_flags()
                 reply += f"\n\n{text_responses.get_main_menu()}"
             elif message_text in ["no", "n"]:
-                state.pop("awaiting_mentorship_confirm", None)
-                state["awaiting_mentorship_role"] = True
+                state.pop("awaiting_mentorship_confirm", None); state["awaiting_mentorship_role"] = True
                 reply = "No problem. What new field are you interested in finding a mentor for?"
             else: reply = "Please answer with 'yes' or 'no'."
         else:
@@ -154,11 +160,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
     elif message_text == "4" or session.current_menu == "entrepreneurship":
         session.current_menu = "entrepreneurship"
         if state.get("awaiting_entrepreneurship_role"):
-            session.entrepreneurship_interest = message_text
-            listings = await entrepreneurship_client.fetch_entrepreneurship_guides(message_text)
-            reply = f"Excellent! I've saved your interest in *{session.entrepreneurship_interest}*.\n" + text_responses.get_empathetic_response("guides_found" if listings else "no_guides_found", listings=listings or [], interest=session.entrepreneurship_interest)
-            session.current_menu = "main"; reset_flags()
-            reply += f"\n\n{text_responses.get_main_menu()}"
+            if message_text.isdigit():
+                reply = "Please type a business area (e.g., 'Agribusiness'), not a number."
+            else:
+                session.entrepreneurship_interest = message_text_original
+                listings = await entrepreneurship_client.fetch_entrepreneurship_guides(message_text)
+                reply = f"Excellent! I've saved your interest in *{session.entrepreneurship_interest}*.\n" + text_responses.get_empathetic_response("guides_found" if listings else "no_guides_found", listings=listings or [], interest=session.entrepreneurship_interest)
+                session.current_menu = "main"; reset_flags()
+                reply += f"\n\n{text_responses.get_main_menu()}"
         elif state.get("awaiting_entrepreneurship_confirm"):
             if message_text in ["yes", "y"]:
                 if session.entrepreneurship_interest:
@@ -168,8 +177,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 session.current_menu = "main"; reset_flags()
                 reply += f"\n\n{text_responses.get_main_menu()}"
             elif message_text in ["no", "n"]:
-                state.pop("awaiting_entrepreneurship_confirm", None)
-                state["awaiting_entrepreneurship_role"] = True
+                state.pop("awaiting_entrepreneurship_confirm", None); state["awaiting_entrepreneurship_role"] = True
                 reply = "No problem. What new business idea are you thinking about?"
             else: reply = "Please answer with 'yes' or 'no'."
         else:
@@ -193,19 +201,22 @@ async def process_message(db: Session, session: models.UserSession, message_text
             if message_text in ["yes", "y"] and session.job_interest:
                 message_text = session.job_interest; reset_flags()
             elif message_text in ["no", "n"]:
-                state["awaiting_interview_role"] = True; reply = "Okay, what job role would you like to practice for instead?"; reset_flags()
+                state.pop("awaiting_interview_role_confirm", None); state["awaiting_interview_role"] = True
+                reply = "Okay, what job role would you like to practice for instead?"
                 await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
                 return
             else:
                 reply = "Please answer with 'yes' or 'no'."; await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
                 return
         
-        if message_text == "6" and session.current_menu == "main":
-            session.current_menu = "interview_practice"; session.interview_data = {}; reset_flags()
-            if session.job_interest: reply = f"Let's practice for an interview! I see your saved interest is *{session.job_interest}*. Would you like to practice for that role? (yes/no)"; state["awaiting_interview_role_confirm"] = True
-            else: reply = "Let's practice for an interview! What job role are you preparing for? (e.g., Accountant, Sales)"; state["awaiting_interview_role"] = True
-            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-            return
+        if (message_text == "6" and session.current_menu == "main") or state.get("awaiting_interview_role"):
+            session.current_menu = "interview_practice"
+            if not state.get("awaiting_interview_role"): # First time entry
+                reset_flags()
+                if session.job_interest: reply = f"Let's practice for an interview! I see your saved interest is *{session.job_interest}*. Would you like to practice for that role? (yes/no)"; state["awaiting_interview_role_confirm"] = True
+                else: reply = "Let's practice for an interview! What job role are you preparing for? (e.g., Accountant, Sales)"; state["awaiting_interview_role"] = True
+                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                return
 
         reply, is_complete = interview_simulator.handle_interview_conversation(session, message_text)
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
