@@ -3,11 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from .config import settings
 
-# Create the SQLAlchemy engine using the URL from settings
-# The connect_args are specific to SQLite for allowing multi-threaded access
+# Create the SQLAlchemy engine using the URL from settings.
+# The SQLite-specific connect_args have been removed to support PostgreSQL.
 engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    settings.DATABASE_URL
 )
 
 # Each instance of SessionLocal will be a new database session
