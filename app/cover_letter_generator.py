@@ -3,6 +3,7 @@ from typing import Tuple
 from . import models
 
 # --- Cover Letter Questions ---
+# These questions guide the user to provide the key components of a cover letter.
 COVER_LETTER_QUESTIONS = [
     ("company_name", "Let's get started on your cover letter. What is the name of the company you are applying to?"),
     ("job_role", "And what is the exact job role you're applying for? (e.g., 'Junior Accountant')"),
@@ -51,29 +52,54 @@ You can now copy and paste this text! While you're applying, would you like me t
 
 def handle_cover_letter_conversation(session: models.UserSession, message_text: str) -> Tuple[str, bool]:
     """
-    Manages the cover letter building conversation.
-    Returns the reply message and a boolean indicating if the flow is complete.
+    Manages the cover letter building conversation with a review-and-edit loop.
     """
     cl_data = session.cover_letter_data
     state = session.session_data
     
+    # --- Handle the Review/Edit Step ---
+    if state.get("awaiting_cl_confirmation"):
+        field_to_confirm = state.get("field_to_confirm")
+        if message_text in ["yes", "correct", "y"]:
+            state.pop("awaiting_cl_confirmation", None)
+            state.pop("field_to_confirm", None)
+            # Fall through to ask the next question
+        elif message_text in ["no", "change", "n"]:
+            if field_to_confirm:
+                cl_data.pop(field_to_confirm, None)
+            state.pop("awaiting_cl_confirmation", None)
+            state.pop("field_to_confirm", None)
+            # Fall through to re-ask the same question
+        else:
+            return "Please reply with 'yes' or 'no'.", False
+
+    # --- Handle a new answer from the user ---
+    previous_question_key = state.get("awaiting_cl_answer_for")
+    if previous_question_key and not state.get("awaiting_cl_confirmation"):
+        cl_data[previous_question_key] = message_text
+        
+        state["awaiting_cl_confirmation"] = True
+        state["field_to_confirm"] = previous_question_key
+        state.pop("awaiting_cl_answer_for", None)
+        confirmation_text = f"I have this down as:\n\n_{cl_data[previous_question_key]}_\n\nIs that correct? (yes/no)"
+        return confirmation_text, False
+
+    # --- Find and ask the next question ---
     next_question_key = None
     for key, _ in COVER_LETTER_QUESTIONS:
         if key not in cl_data:
             next_question_key = key
             break
             
-    previous_question_key = state.get("awaiting_cl_answer_for")
-    if previous_question_key:
-        cl_data[previous_question_key] = message_text
-    
     if next_question_key:
         _, question_text = next((q for q in COVER_LETTER_QUESTIONS if q[0] == next_question_key))
         state["awaiting_cl_answer_for"] = next_question_key
         return question_text, False
     else:
+        # All questions are answered and confirmed
         state.pop("awaiting_cl_answer_for", None)
+        state.pop("awaiting_cl_confirmation", None)
+        state.pop("field_to_confirm", None)
         final_letter = format_cover_letter(cl_data, session.resume_data)
-        # Set a new flag to wait for the user's response to the job search offer
         state["awaiting_similar_jobs_confirm"] = True
         return final_letter, True

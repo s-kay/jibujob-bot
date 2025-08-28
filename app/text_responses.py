@@ -10,18 +10,18 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
     """
     if is_new_user:
         greetings = [
-            f"Hi {user_name}, it's great to meet you! I'm KaziLeo, your new career companion.",
-            f"Welcome, {user_name}! My name is KaziLeo, and I'm here to help you on your career journey.",
-            f"Karibu {user_name}! I'm KaziLeo, your personal guide to jobs and skills in Kenya.",
+            f"Hi 👋🏾 {user_name}! 🤝🏽 it's great to meet you! I'm Riziki!",
+            f"Welcome 🥳, {user_name}! My name is Riziki!",
+            f"Karibu 🥳, {user_name}! I'm Riziki!",
         ]
-        introduction = "I can help you find jobs, learn new skills, connect with mentors, or explore business ideas."
+        introduction = "I am a WhatsApp AI Bot that helps you find jobs, learn new skills, connect with mentors, or explore business ideas in Kenya."
         return (random.choice(greetings), introduction)
     else:
         # For returning users, keep it short and direct.
         greetings = [
-            f"Hey {user_name}! Great to see you again.",
-            f"Welcome back, {user_name}! Ready to pick up where we left off?",
-            f"Karibu tena, {user_name}! Let's find some more opportunities for you.",
+            f"Hey 👋🏾 {user_name}! Great to see you again.",
+            f"Welcome back 🥳, {user_name}! Ready to pick up where we left off?",
+            f"Karibu tena 🥳, {user_name}! Let's find some more opportunities for you.",
         ]
         return (random.choice(greetings), None)
 

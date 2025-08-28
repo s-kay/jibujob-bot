@@ -8,6 +8,7 @@ CV_QUESTIONS = [
     ("full_name", "Of course. Let's build a CV that gets noticed. First, what is your full name?"),
     ("email", "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"),
     ("phone", "Perfect. And your phone number?"),
+    ("links", "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."),
     ("summary", 
      "Next, let's write a powerful Professional Summary. Describe your main role and top achievement. "
      "For example: 'Detail-oriented Accountant with 3 years of experience who saved a company KES 500,000 by optimizing budgets.'"),
@@ -19,7 +20,7 @@ CV_QUESTIONS = [
      "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"),
     ("education", 
      "Almost done! What is your highest qualification and where did you get it? "
-     "For example: 'Bachelor of Commerce in Finance, University of Nairobi'"),
+     "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"),
 ]
 
 def format_cv(cv_data: dict) -> str:
@@ -31,6 +32,7 @@ def format_cv(cv_data: dict) -> str:
 *Name:* {cv_data.get('full_name', 'N/A')}
 *Email:* {cv_data.get('email', 'N/A')}
 *Phone:* {cv_data.get('phone', 'N/A')}
+*Links:* {cv_data.get('links', 'N/A')}
 
 *--- Professional Summary ---*
 {cv_data.get('summary', 'N/A')}
@@ -61,33 +63,30 @@ def handle_resume_conversation(session: models.UserSession, message_text: str) -
     if state.get("awaiting_cv_confirmation"):
         field_to_confirm = state.get("field_to_confirm")
         if message_text in ["yes", "correct", "y"]:
-            # User confirmed, clear flags and move on
             state.pop("awaiting_cv_confirmation", None)
             state.pop("field_to_confirm", None)
+            # Fall through to ask the next question
         elif message_text in ["no", "change", "n"]:
-            # User wants to edit, remove the incorrect data and ask again
             if field_to_confirm:
                 cv_data.pop(field_to_confirm, None)
             state.pop("awaiting_cv_confirmation", None)
             state.pop("field_to_confirm", None)
-            # We'll fall through to the next logic which will re-ask the question
+            # Fall through to re-ask the same question
         else:
             return "Please reply with 'yes' or 'no'.", False
 
     # --- Handle a new answer from the user ---
     previous_question_key = state.get("awaiting_cv_answer_for")
     if previous_question_key and not state.get("awaiting_cv_confirmation"):
-        # Save the answer
         if message_text.lower() == 'skip' and previous_question_key == 'experience':
             cv_data[previous_question_key] = "No formal work experience."
         else:
             cv_data[previous_question_key] = message_text
         
-        # Ask for confirmation
         state["awaiting_cv_confirmation"] = True
         state["field_to_confirm"] = previous_question_key
         state.pop("awaiting_cv_answer_for", None)
-        confirmation_text = f"I have this down as:\n\n_{message_text}_\n\nIs that correct? (yes/no)"
+        confirmation_text = f"I have this down as:\n\n_{cv_data[previous_question_key]}_\n\nIs that correct? (yes/no)"
         return confirmation_text, False
 
     # --- Find and ask the next question ---

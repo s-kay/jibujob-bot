@@ -31,18 +31,19 @@ MOCK_JOBS = {
 }
 
 
-async def fetch_jobs(job_title: str, country_code: str = "KE") -> Optional[List[str]]:
+async def fetch_jobs(job_title: str) -> Optional[List[str]]:
     """
     Fetches job listings. 
-    Currently uses an internal mock database.
-    This function is ready to be swapped with a live API call in the future.
+    Currently uses an internal mock database with improved search logic.
     """
     logging.info(f"Fetching mock jobs for query: '{job_title}'")
     
     # Simple search logic: find the best matching key in our mock database
+    search_term = job_title.lower()
     best_match_key = None
     for key in MOCK_JOBS:
-        if key in job_title.lower():
+        # Check if the user's input is a substring of the key, or vice-versa
+        if search_term in key or key in search_term:
             best_match_key = key
             break
             
