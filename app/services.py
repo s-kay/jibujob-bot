@@ -206,13 +206,21 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "5" or session.current_menu == "resume_builder":
-        if message_text == "5" and session.current_menu == "main":
-            session.current_menu = "resume_builder"; session.resume_data = {}; reset_flags(); message_text = "" 
+    # --- AI Resume Builder Flow ---
+    if message_text == "5" or session.current_menu == "resume_builder":
+        if message_text == "5":
+            session.current_menu = "resume_builder"
+            session.resume_data = {}
+            reset_flags()
+            message_text = "" 
+
         reply, is_complete = resume_builder.handle_resume_conversation(session, message_text)
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
         if is_complete:
-            session.current_menu = "main"; await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+            session.current_menu = "main"
+            await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+        
         return
 
     elif message_text == "6" or session.current_menu == "interview_practice":
