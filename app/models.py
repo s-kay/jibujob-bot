@@ -35,20 +35,17 @@ class UserSession(Base):
     feedbacks: Mapped[List["Feedback"]] = relationship(back_populates="user_session")
 
 
-# --- NEW FEEDBACK TABLE ---
 class Feedback(Base):
     __tablename__ = "feedback"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_phone_number: Mapped[str] = mapped_column(String, ForeignKey("user_sessions.phone_number"), index=True)
     
-    # Foreign key to link to the UserSession table
-    user_phone_number: Mapped[str] = mapped_column(String, ForeignKey("user_sessions.phone_number"))
-    
-    # The actual feedback content
-    rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    what_liked: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    what_confusing: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    feature_requests: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # THE FIX IS HERE: Column names now match the rest of the application
+    likes: Mapped[Optional[str]] = mapped_column(String)
+    dislikes: Mapped[Optional[str]] = mapped_column(String)
+    suggestions: Mapped[Optional[str]] = mapped_column(String)
+    rating: Mapped[Optional[int]] = mapped_column(Integer)
     
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     
