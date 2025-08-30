@@ -17,16 +17,16 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
         return (random.choice(greetings), introduction)
     else:
         greetings = [
-            f"Hey {user_name}! Great to see you again.",
-            f"Welcome back, {user_name}! Ready to pick up where we left off?",
-            f"Karibu tena, {user_name}! Let's find some more opportunities for you.",
-            f"Niaje {user_name}! Good to see you again.",
+            f"Hey {user_name}! 👋🏾 Great to see you again.",
+            f"Welcome back 😃,{user_name}! Ready to pick up where we left off?",
+            f"Karibu tena 👏🏾, {user_name}! Let's find some more opportunities for you.",
+            f"Niaje {user_name}! 👋🏾 Nimefurahi tumekutana tena.",
         ]
         return (random.choice(greetings), None)
 
 def get_sheng_greeting_response() -> str:
     """Returns a random, friendly Sheng response to a greeting."""
-    return random.choice(["Poa!", "Fiti sana!", "Poa poa."])
+    return random.choice(["Poa!", "Fiti sana!", "Poa poa.", "Mzuri sana"])
 
 def get_main_menu() -> str:
     """
