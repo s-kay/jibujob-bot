@@ -17,7 +17,6 @@ def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tup
         session_timeout = timedelta(minutes=settings.SESSION_TIMEOUT_MINUTES)
         now_utc = datetime.now(timezone.utc)
         
-        # Make the database datetime object timezone-aware before comparison
         last_active_aware = session.last_active.replace(tzinfo=timezone.utc)
 
         if now_utc - last_active_aware > session_timeout:
@@ -26,7 +25,7 @@ def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tup
             session.session_data = {}
     else:
         logging.info(f"New user session created for {phone_number}")
-        # THE FIX IS HERE: We now provide explicit default values for all new fields.
+        # We no longer pass feedback_data here
         session = models.UserSession(
             phone_number=phone_number,
             user_name=user_name,
@@ -34,8 +33,7 @@ def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tup
             session_data={},
             resume_data={},
             cover_letter_data={},
-            interview_data={},
-            feedback_data={}
+            interview_data={}
         )
         db.add(session)
         db.commit()
@@ -52,7 +50,7 @@ def update_session(db: Session, session: models.UserSession):
     attributes.flag_modified(session, "resume_data")
     attributes.flag_modified(session, "cover_letter_data")
     attributes.flag_modified(session, "interview_data")
-    attributes.flag_modified(session, "feedback_data")
+    # We no longer flag feedback_data here
     db.commit()
 
 def save_feedback(db: Session, user_phone_number: str, feedback_data: dict):
