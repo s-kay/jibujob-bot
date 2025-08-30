@@ -49,14 +49,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
 
         if is_complete:
-            if feedback_data:
-                crud.save_feedback(db, user_phone_number=session.phone_number, feedback_data=feedback_data)
+            # THE FIX IS HERE: We now reliably call the save function.
+            crud.save_feedback(db, user_phone_number=session.phone_number, feedback_data=feedback_data or {})
             session.current_menu = "main"
             state.clear()
             await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
-   # --- Keyword-based Routing (Hybrid NLP Model) ---
+    # # --- Keyword-based Routing (Hybrid NLP Model) ---
     if session.current_menu == "main":
         if "kazi" in message_text or "ajira" in message_text or "wera" in message_text or "mboka" in message_text or "works" in message_text: message_text = "1"
         elif "mafunzo" in message_text or "jifunza" in message_text or "kusoma" in message_text: message_text = "2"
