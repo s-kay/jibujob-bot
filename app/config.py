@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     def GRAPH_API_URL(self) -> str:
         return f"https://graph.facebook.com/v22.0/{self.WHATSAPP_PHONE_ID}/messages"
 
-    # Session timeout in seconds (e.g., 5 minutes)
-    SESSION_TIMEOUT: int = 300
+    # Session timeout in minutes (e.g., 5 minutes)
+    SESSION_TIMEOUT_MINUTES: int = 5
 
     model_config = SettingsConfigDict(env_file=env_path, extra='ignore')
 

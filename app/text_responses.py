@@ -16,7 +16,6 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
         introduction = "I can help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara)."
         return (random.choice(greetings), introduction)
     else:
-        # For returning users, keep it short and direct.
         greetings = [
             f"Hey {user_name}! Great to see you again.",
             f"Welcome back, {user_name}! Ready to pick up where we left off?",
@@ -31,7 +30,7 @@ def get_sheng_greeting_response() -> str:
 
 def get_main_menu() -> str:
     """
-    Returns the main menu in a more conversational format.
+    Returns the main menu in a more conversational format with Swahili hints.
     """
     return (
         "What's our mission for today?\n\n"
@@ -54,12 +53,22 @@ def get_empathetic_response(context: str, listings: List[str] = [], interest: Op
     interest_text = f"*{interest}*" if interest else "your topic"
 
     responses = {
-        # ... (rest of the responses remain the same)
+        "searching": [ f"Okay, let me check the latest opportunities for {interest_text}. One moment..." ],
+        "api_error": [ "Apologies, I'm having a little trouble connecting to our services right now. Could you please try again in a few minutes?" ],
+        "jobs_found": [ f"Alright, I found a few promising roles for {interest_text}! Here’s what I’ve got:" ],
+        "no_jobs_found": [ f"Hmm, it looks like there aren't any open roles for {interest_text} right now. That's okay! I'll keep an eye out and can alert you when one is posted." ],
+        "training_found": [ f"Perfect! I've found some great courses to help you build your skills in {interest_text}. Take a look:" ],
+        "no_training_found": [ f"I couldn't find any specific courses for {interest_text} at the moment, but I'll keep searching and let you know if something comes up!" ],
+        "guides_found": [ f"That's a great field! I've gathered some resources to get you started with {interest_text}:" ],
+        "no_guides_found": [ f"I don't have specific guides for {interest_text} just yet, but that's a great topic. I'll research it and add it to my knowledge base!" ],
+        "mentors_found": [ f"Connecting with a mentor is a brilliant idea! Here are some experienced professionals in {interest_text} who are available:" ],
+        "no_mentors_found": [ f"It seems my list of mentors for {interest_text} is empty right now. I'll work on finding experts to add!" ],
+        "interest_saved_and_jobs_found": [ f"Great! I've saved your interest in {interest_text}.\n\nHere are the first results I found for you:" ],
+        "interest_saved_and_training_found": [ f"Great! I've saved your interest in {interest_text}.\n\nHere are the first courses:" ],
+        "interest_saved_and_mentors_found": [ f"Perfect! I've saved your interest in {interest_text}.\n\nHere are some available mentors:" ],
+        "interest_saved_and_guides_found": [ f"Excellent! I've saved your interest in {interest_text}.\n\nHere are the first guides:" ],
     }
     
     listing_str = "\n\n" + "\n".join(listings) if listings else ""
     
-    # Check if the context exists, otherwise return a default message
-    if context in responses:
-        return random.choice(responses[context]) + listing_str
-    return "Here is the information I found for you:" + listing_str
+    return random.choice(responses.get(context, ["Here is the information I found for you:"])) + listing_str

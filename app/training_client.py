@@ -1,55 +1,47 @@
 # app/training_client.py
-import logging
+import asyncio
 from typing import List, Optional
 
-# --- Uncategorized Mock Training Database ---
-# This is now a single list, allowing for more flexible keyword searching.
-MOCK_TRAININGS_LIST = [
-    # Digital Skills
-    "*FREE Digital Marketing & E-Commerce Training/Work Readiness/Mentorship* - https://ajiradigital.go.ke/#/activity/mombasa-kwashee-ayec-digital-marketing-e-commerce-training-mentorship-cohort-1-september-2025/TRAINING",
-    "*FREE Digital Marketing and E-Commerce Training / Work Readiness / Mentorship* -  https://ajiradigital.go.ke/#/activity/nyandarua-destiny-sanctuary-digital-marketing-training-mentorship-29th-1st-september-2025/TRAINING",
-    "*FREE online work readiness training and mentorship at Mukuru Slums Development Project*  - https://ajiradigital.go.ke/#/activity/nairobi-mukuru-slums-dev-project-digital-marketing-ecommerce-training-mentorship-9th-10th-s/TRAINING",
-    "*FREE Data Analysis using Excel Training/Mentorship* - https://ajiradigital.go.ke/#/activity/monday-1st-september-zoom-data-analysis-using-excel-training-mentorship/TRAINING?t=U2FsdGVkX193A7kp8R5MeJ1W2l6pz1WVZGtniATW2s24Llnc2ikwW0iHmLoN4Nzd7YZc60vI4fhiqBbDKh4qnpntIMwNNt%2BbU07%2FKsemdej4De5QDlJ1TatxnpudFD04xt7BkukZqXa6L0zkbSWzSSWM3I%2FdKOXvNFcWCt2qbP7ymROjdGSeaWlTxvDYMgV0",
-    "*FREE online work readiness training and mentorship at KIHBT Ngong*  - https://ajiradigital.go.ke/#/activity/kajiado-kihbt-ngong-digital-marketing-ecommerce-training-mentorship-4th-5th-sept-2025/TRAINING",
-
-
-    # AI
-    "*Introduction to AI Prompt Engineering* (Free)",
-    "*AI for Everyone* by Andrew Ng (Coursera)",
-    "*Generative AI Fundamentals* (Google Cloud Skills)",
-    "*Basics of Machine Learning* (Udacity)",
+# --- High-Quality Mock Database of Real, Relevant Courses ---
+# This list is manually curated to provide real value to users in the pilot program.
+MOCK_TRAINING_LIST = [
+    # Digital Skills & Marketing
+    "*Fundamentals of Digital Marketing* by Google - Learn the basics of digital marketing with this free, certified course. https://skillshop.exceedlms.com/student/path/6943-fundamentals-of-digital-marketing",
+    "*Social Media Marketing Course* by HubSpot Academy - A free, comprehensive course on social media strategy. https://academy.hubspot.com/courses/social-media",
+    "*Introduction to Graphic Design* by Great Learning - A free beginner's course to learn the fundamentals of graphic design. https://www.mygreatlearning.com/academy/learn-for-free/courses/graphic-design-basics",
     
-    # Agribusiness
-    "*Modern Poultry Farming Techniques* (Local NGO)",
-    "*Guide to Sustainable Farming* (Online Course)",
-    "*Agribusiness Management Essentials* (Strathmore)",
-    "*Introduction to Hydroponics* (YouTube)",
-    
-    # Crafts & Business
-    "*Turning Your Craft into a Business* (YouTube Series)",
-    "*Etsy for Beginners: Selling Handmade Goods*",
-    "*Basic Bookkeeping for Creatives*",
-    "*Photography for Your Handmade Products*",
+    # Ajira Digital (Official Kenyan Government Program)
+    "*Ajira Digital Training Program* - Get skills in content writing, transcription, and data entry for online work. https://ajiradigital.go.ke/#/training",
 
-    # Sales
-    "*The Art of Sales: Mastering the Selling Process* (Coursera)",
-    "*Customer Service Excellence* (Alison)",
-    "*Negotiation Skills for Sales Professionals*",
+    # Soft Skills
+    "*Introduction to Public Speaking* by University of Washington - A highly-rated free course on Coursera. https://www.coursera.org/learn/public-speaking",
+    "*Sales and Negotiations Skills* - A free short course on Alison.com covering key business skills. https://alison.com/course/sales-and-negotiations-skills",
+    
+    # Financial Literacy
+    "*Personal Finance & Credit* - A free introductory course on Alison.com. https://alison.com/course/an-introductory-course-on-personal-finance-and-credit",
+    "*Managing Your M-Pesa Business* - A practical guide on using M-Pesa for business (YouTube Series). https://www.youtube.com/watch?v=examplelink1",
+    
+    # Tech Skills
+    "*Introduction to Web Development* - A free course covering HTML, CSS, and JavaScript. https://www.freecodecamp.org/learn/responsive-web-design/",
+    "*Python for Everybody* by University of Michigan - A very popular free course for learning Python. https://www.coursera.org/specializations/python",
 ]
 
-async def fetch_trainings(skill_title: str) -> Optional[List[str]]:
+async def fetch_trainings(keyword: str) -> Optional[List[str]]:
     """
-    Fetches training listings by performing a keyword search on the mock database.
+    Simulates fetching training courses based on a keyword search.
+    In the future, this could be an API call to a real course provider.
     """
-    logging.info(f"Fetching mock trainings for keyword: '{skill_title}'")
+    await asyncio.sleep(1) # Simulate network latency
     
-    search_term = skill_title.lower()
-    
-    # Find all trainings in the list that contain the search term
-    found_trainings = [training for training in MOCK_TRAININGS_LIST if search_term in training.lower()]
-    
-    if not found_trainings:
-        logging.warning(f"No mock trainings found for keyword '{skill_title}'")
-        return []
-        
-    return found_trainings
+    try:
+        # A simple keyword search logic
+        keyword = keyword.lower()
+        results = [
+            course for course in MOCK_TRAINING_LIST 
+            if keyword in course.lower()
+        ]
+        return results if results else []
+    except Exception as e:
+        print(f"Error fetching training data: {e}")
+        return None
+
