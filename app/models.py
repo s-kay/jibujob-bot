@@ -47,7 +47,7 @@ class Feedback(Base):
     suggestions: Mapped[Optional[str]] = mapped_column(String)
     rating: Mapped[Optional[int]] = mapped_column(Integer)
     
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
     
     # Relationship back to UserSession
     user_session: Mapped["UserSession"] = relationship(back_populates="feedbacks")
