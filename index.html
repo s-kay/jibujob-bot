@@ -1,1 +1,157 @@
-[Immersive content redacted for brevity.]
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaziLeo Pilot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple scrollbar styling */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="h-full bg-gray-100 flex flex-col items-center justify-center font-sans">
+    <div class="w-full max-w-md h-full md:h-[90vh] md:max-h-[700px] bg-white rounded-lg shadow-xl flex flex-col">
+        <!-- Header -->
+        <header class="bg-emerald-600 text-white p-4 flex items-center justify-center relative rounded-t-lg">
+            <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-3">
+                <svg class="w-10 h-10 text-emerald-600" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="48" stroke="currentColor" stroke-width="4"/>
+                    <path d="M50 28C37.8497 28 28 37.8497 28 50C28 52.6184 28.4734 55.1271 29.3511 57.4475M70.6489 42.5525C71.5266 44.8729 72 47.3816 72 50C72 62.1503 62.1503 72 50 72C42.2338 72 35.3444 67.7533 31.2223 61.5M50 28V12M50 72V88M29.3511 57.4475L15 63M70.6489 42.5525L85 37M31.2223 61.5L24 76M50 28C50 28 58 42 50 50C42 58 50 72 50 72" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold">KaziLeo</h1>
+                <p class="text-sm opacity-80">Your Career Companion</p>
+            </div>
+        </header>
+        
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto bg-gray-50">
+            <!-- Messages will be added here -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="p-4 text-sm text-gray-500 hidden">
+            KaziLeo is typing...
+        </div>
+
+        <!-- Message Input -->
+        <footer class="p-4 border-t border-gray-200 rounded-b-lg">
+            <form id="message-form" class="flex items-center">
+                <input type="text" id="message-input" class="flex-1 border border-gray-300 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Type your message..." autocomplete="off">
+                <button type="submit" class="ml-3 bg-emerald-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-emerald-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+<script>
+    const chatMessages = document.getElementById('chat-messages');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    // Generate or retrieve a unique user ID for the session
+    let userId = localStorage.getItem('kaziLeoUserId');
+    if (!userId) {
+        userId = 'web-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem('kaziLeoUserId', userId);
+    }
+    const userName = localStorage.getItem('kaziLeoUserName') || 'Friend';
+
+    // Function to add a message to the chat window
+    function addMessage(text, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('mb-4', 'max-w-xs', 'md:max-w-md', 'rounded-lg', 'p-3', 'text-sm');
+        
+        // Sanitize text to prevent HTML injection
+        const sanitizedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // Format bold text and newlines
+        const formattedText = sanitizedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+
+        messageElement.innerHTML = formattedText;
+
+        if (sender === 'user') {
+            messageElement.classList.add('bg-emerald-600', 'text-white', 'self-end', 'ml-auto', 'rounded-br-none');
+        } else {
+            messageElement.classList.add('bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto', 'rounded-bl-none');
+        }
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to bottom
+    }
+
+    // Handle form submission
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const messageText = messageInput.value.trim();
+        if (messageText === '') return;
+
+        addMessage(messageText, 'user');
+        messageInput.value = '';
+        messageInput.disabled = true;
+        typingIndicator.classList.remove('hidden');
+
+        try {
+            // This is a special payload that mimics the WhatsApp structure
+            // so our existing backend can understand it.
+            const payload = {
+                object: "whatsapp_business_account",
+                entry: [{
+                    changes: [{
+                        value: {
+                            messaging_product: "whatsapp",
+                            metadata: {},
+                            contacts: [{ profile: { name: userName }, wa_id: userId }],
+                            messages: [{ from: userId, id: "web-message-" + Date.now(), timestamp: String(Math.floor(Date.now() / 1000)), text: { body: messageText }, type: "text" }]
+                        },
+                        field: "messages"
+                    }]
+                }]
+            };
+
+            const response = await fetch('/webhook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            
+            // Because we can't receive pushed messages from the server on this simple page,
+            // we will need to refresh or build a more complex solution later.
+            // For now, we will add a small delay and a message.
+            setTimeout(() => {
+                // This is a limitation of this simple web pilot.
+                // The bot's *actual* reply is being processed by the server, but
+                // we don't have a way to receive it here without a more complex setup.
+                // In a real web app, you would use WebSockets for this.
+            }, 1000);
+
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            addMessage('Sorry, I had trouble connecting. Please try again.', 'bot');
+        } finally {
+            messageInput.disabled = false;
+            typingIndicator.classList.add('hidden');
+            messageInput.focus();
+        }
+    });
+
+    // Send initial greeting to start the conversation
+    // This is a simplified approach for the web. A more robust solution would be better.
+    // For now, we'll let the user initiate.
+     addMessage('Welcome to the KaziLeo Web Pilot! Please type "hi" to get started.', 'bot');
+
+</script>
+
+</body>
+</html>
+
