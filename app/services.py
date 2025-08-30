@@ -49,10 +49,10 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
 
         if is_complete:
-            # THE FIX IS HERE: We now reliably call the save function.
-            crud.save_feedback(db, user_phone_number=session.phone_number, feedback_data=feedback_data or {})
+            if feedback_data:
+                crud.save_feedback(db, user_phone_number=session.phone_number, feedback_data=feedback_data)
             session.current_menu = "main"
-            state.clear()
+            reset_flags()
             await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
