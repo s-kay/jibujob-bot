@@ -31,7 +31,7 @@ async def send_whatsapp_message(to: str, message: str):
     }
     
     # THE FIX IS HERE: Corrected the URL construction
-    url = f"https://graph.facebook.com/{settings.GRAPH_API_URL}/{settings.WHATSAPP_PHONE_ID}/messages"
+    url = f"https://graph.facebook.com/{settings.GRAPH_API_URL}"
 
     async with httpx.AsyncClient() as client:
         try:
