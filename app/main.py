@@ -1,22 +1,27 @@
 # app/main.py
 import logging
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
+# Import modules from our application structure
 from . import models, crud, services
 from .database import engine, get_db
-from app.config import settings
+from .config import settings
 from pydantic import BaseModel, Field
 
+# --- Boilerplate: Create database tables on startup ---
 models.Base.metadata.create_all(bind=engine)
 
+# --- Configure Logging ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="KaziLeo WhatsApp Bot")
 
-# --- Pydantic Models for Webhook Validation ---
+# --- Pydantic Models for WhatsApp Webhook Validation ---
+# (These models define the structure of the incoming data from WhatsApp)
 class TextMessage(BaseModel):
     body: str
 
@@ -54,12 +59,19 @@ class WebhookRequest(BaseModel):
 
 
 # --- API Endpoints ---
-@app.get("/", tags=["Root"])
+
+@app.get("/", response_class=FileResponse)
 def read_root():
-    return {"message": "KaziLeo API is running."}
+    """
+    Serves the main index.html file for the Web Pilot.
+    """
+    return "index.html"
 
 @app.get("/webhook", tags=["Webhook"])
 async def verify_webhook(request: Request):
+    """
+    Handles the webhook verification request from Meta.
+    """
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")
     challenge = request.query_params.get("hub.challenge")
@@ -73,8 +85,12 @@ async def verify_webhook(request: Request):
 
 @app.post("/webhook", tags=["Webhook"])
 async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db)):
+    """
+    Handles incoming messages from WhatsApp users or the Web Pilot.
+    """
     try:
         if not request.entry or not request.entry[0].changes:
+            logger.warning("Webhook received with no entries or changes.")
             return Response(status_code=200)
 
         change = request.entry[0].changes[0]
@@ -85,21 +101,18 @@ async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db))
             contact = value.contacts[0]
 
             if message.type != "text" or not message.text:
+                logger.info(f"Received non-text message type: {message.type}")
                 return Response(status_code=200)
 
             from_number = message.from_number
             user_name = contact.profile.name
             message_text = message.text.body
 
-            # Get session and is_new flag
             session, is_new = crud.get_or_create_session(db, phone_number=from_number, user_name=user_name)
-
-            # Pass both to the business logic handler
             await services.process_message(db, session, message_text, is_new_user=is_new)
-            
             crud.update_session(db, session)
         else:
-            logger.info("Received a non-message webhook event.")
+            logger.info(f"Received a non-message webhook event (e.g., status update).")
 
     except Exception as e:
         logger.error(f"Error handling webhook: {e}", exc_info=True)
