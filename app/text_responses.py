@@ -18,9 +18,9 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
     else:
         greetings = [
             f"Hey {user_name}! 👋🏾 Great to see you again.",
-            f"Welcome back 😃,{user_name}! Ready to pick up where we left off?",
-            f"Karibu tena 👏🏾, {user_name}! Let's find some more opportunities for you.",
-            f"Niaje {user_name}! 👋🏾 Nimefurahi tumekutana tena.",
+            f"😃 Welcome back,{user_name}! Ready to pick up where we left off?",
+            f"👏🏾 Karibu tena, {user_name}! Let's find some more opportunities for you.",
+            f"👋🏾 Niaje {user_name}! Nimefurahi tumekutana tena.",
         ]
         return (random.choice(greetings), None)
 
