@@ -1,6 +1,6 @@
 # app/services.py
 from sqlalchemy.orm import Session
-from . import models, whatsapp_client, job_client, training_client, entrepreneurship_client, mentorship_client, resume_builder, interview_simulator, cover_letter_generator, ai_client, skills_analyzer
+from . import models, whatsapp_client, job_client, training_client, entrepreneurship_client, mentorship_client, resume_builder, interview_simulator, cover_letter_generator, ai_client, skills_analyzer, feedback_handler, crud
 from . import text_responses
 
 async def process_message(db: Session, session: models.UserSession, message_text: str, is_new_user: bool):
@@ -17,7 +17,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 state[key] = False
 
     # --- Universal Commands (Highest Priority) ---
-    sheng_greetings = ["niaje", "sasa", "vipi", "habari"]
+    sheng_greetings = ["niaje", "sasa", "vipi", "habari", "mambo"]
     if message_text in ["hi", "hello", "start", "menu"] or any(greeting in message_text for greeting in sheng_greetings):
         session.current_menu = "main"
         reset_flags()
@@ -38,7 +38,25 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
-    # --- Keyword-based Routing (Hybrid NLP Model) ---
+    # --- Feedback Flow ---
+    if message_text in ["feedback", "maoni"] or session.current_menu == "feedback":
+        if message_text in ["feedback", "maoni"] and session.current_menu != "feedback":
+            session.current_menu = "feedback"
+            state.clear()
+            message_text = "" 
+
+        reply, feedback_data, is_complete = feedback_handler.handle_feedback_conversation(session, message_text)
+        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
+        if is_complete:
+            if feedback_data:
+                crud.save_feedback(db, user_phone_number=session.phone_number, feedback_data=feedback_data)
+            session.current_menu = "main"
+            state.clear()
+            await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+        return
+
+   # --- Keyword-based Routing (Hybrid NLP Model) ---
     if session.current_menu == "main":
         if "kazi" in message_text or "ajira" in message_text or "wera" in message_text or "mboka" in message_text or "works" in message_text: message_text = "1"
         elif "mafunzo" in message_text or "jifunza" in message_text or "kusoma" in message_text: message_text = "2"
