@@ -18,15 +18,13 @@ class Settings(BaseSettings):
     WHATSAPP_TOKEN: str = ""
     WHATSAPP_PHONE_ID: str = ""
     VERIFY_TOKEN: str = ""
+    GRAPH_API_URL: str = ""
 
     # External API Keys
     JOB_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
 
-    # Derived variable for the Graph API URL
-    @property
-    def GRAPH_API_URL(self) -> str:
-        return f"https://graph.facebook.com/v22.0/{self.WHATSAPP_PHONE_ID}/messages"
+
 
     # Session timeout in minutes (e.g., 5 minutes)
     SESSION_TIMEOUT_MINUTES: int = 5
