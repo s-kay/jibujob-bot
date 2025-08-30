@@ -56,7 +56,6 @@
     const messageInput = document.getElementById('message-input');
     const typingIndicator = document.getElementById('typing-indicator');
 
-    // Generate or retrieve a unique user ID for the session
     let userId = localStorage.getItem('kaziLeoUserId');
     if (!userId) {
         userId = 'web-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
@@ -64,14 +63,11 @@
     }
     const userName = localStorage.getItem('kaziLeoUserName') || 'Friend';
 
-    // Function to add a message to the chat window
     function addMessage(text, sender) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('mb-4', 'max-w-xs', 'md:max-w-md', 'rounded-lg', 'p-3', 'text-sm');
         
-        // Sanitize text to prevent HTML injection
         const sanitizedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        // Format bold text and newlines
         const formattedText = sanitizedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
         messageElement.innerHTML = formattedText;
@@ -82,10 +78,9 @@
             messageElement.classList.add('bg-gray-200', 'text-gray-800', 'self-start', 'mr-auto', 'rounded-bl-none');
         }
         chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Handle form submission
     messageForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const messageText = messageInput.value.trim();
@@ -97,11 +92,11 @@
         typingIndicator.classList.remove('hidden');
 
         try {
-            // This is a special payload that mimics the WhatsApp structure
-            // so our existing backend can understand it.
             const payload = {
                 object: "whatsapp_business_account",
                 entry: [{
+                    // THE FIX IS HERE: We added a dummy ID to match the Pydantic model.
+                    id: "web-entry-" + Date.now(),
                     changes: [{
                         value: {
                             messaging_product: "whatsapp",
@@ -121,19 +116,8 @@
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                 addMessage(`Error: Server responded with status ${response.status}`, 'bot');
             }
-            
-            // Because we can't receive pushed messages from the server on this simple page,
-            // we will need to refresh or build a more complex solution later.
-            // For now, we will add a small delay and a message.
-            setTimeout(() => {
-                // This is a limitation of this simple web pilot.
-                // The bot's *actual* reply is being processed by the server, but
-                // we don't have a way to receive it here without a more complex setup.
-                // In a real web app, you would use WebSockets for this.
-            }, 1000);
-
 
         } catch (error) {
             console.error('Error sending message:', error);
@@ -145,11 +129,7 @@
         }
     });
 
-    // Send initial greeting to start the conversation
-    // This is a simplified approach for the web. A more robust solution would be better.
-    // For now, we'll let the user initiate.
-     addMessage('Welcome to the KaziLeo Web Pilot! Please type "hi" to get started.', 'bot');
-
+    addMessage('Welcome to the KaziLeo Web Pilot! Please type "hi" to get started.', 'bot');
 </script>
 
 </body>
