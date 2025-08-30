@@ -4,7 +4,6 @@ from app.config import settings
 import asyncio
 
 # A temporary in-memory store for web replies.
-# In a real production web app, you would use a more robust system like WebSockets.
 WEB_REPLIES = {}
 
 async def send_whatsapp_message(to: str, message: str):
@@ -31,18 +30,19 @@ async def send_whatsapp_message(to: str, message: str):
         "text": {"body": message},
     }
     
-    url = f"https://graph.facebook.com/v{settings.GRAPH_API_URL}/{settings.WHATSAPP_PHONE_ID}/messages"
+    # THE FIX IS HERE: Corrected the URL construction
+    url = f"https://graph.facebook.com/{settings.GRAPH_API_URL}/{settings.WHATSAPP_PHONE_ID}/messages"
 
     async with httpx.AsyncClient() as client:
         try:
-            # Split long messages into chunks
             if len(message) > 4096:
                 chunks = [message[i:i+4096] for i in range(0, len(message), 4096)]
                 for i, chunk in enumerate(chunks):
                     chunk_payload = payload.copy()
                     chunk_payload["text"]["body"] = f"({i+1}/{len(chunks)})\n{chunk}"
-                    await client.post(url, headers=headers, json=chunk_payload, timeout=20)
-                    await asyncio.sleep(1) # Small delay between chunks
+                    response = await client.post(url, headers=headers, json=chunk_payload, timeout=20)
+                    response.raise_for_status()
+                    await asyncio.sleep(1)
             else:
                 response = await client.post(url, headers=headers, json=payload, timeout=20)
                 response.raise_for_status()
