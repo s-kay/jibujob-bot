@@ -95,7 +95,6 @@
             const payload = {
                 object: "whatsapp_business_account",
                 entry: [{
-                    // THE FIX IS HERE: We added a dummy ID to match the Pydantic model.
                     id: "web-entry-" + Date.now(),
                     changes: [{
                         value: {
@@ -117,6 +116,14 @@
 
             if (!response.ok) {
                  addMessage(`Error: Server responded with status ${response.status}`, 'bot');
+            } else {
+                // THE FIX IS HERE: We now process the replies from the server.
+                const data = await response.json();
+                if (data.replies && data.replies.length > 0) {
+                    for (const reply of data.replies) {
+                        addMessage(reply, 'bot');
+                    }
+                }
             }
 
         } catch (error) {
