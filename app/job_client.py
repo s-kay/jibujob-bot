@@ -1,10 +1,21 @@
-# app/job_client.py
-import httpx
 import logging
-from typing import List, Optional
 
-# --- Uncategorized Mock Job Database with REAL Data ---
-# This is now a single list, allowing for more flexible keyword searching.
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# --- Smarter Keyword Mapping ---
+# This dictionary helps the bot understand related terms.
+INTEREST_KEYWORDS = {
+    "it": ["it", "software", "developer", "tech", "engineer", "soc", "support", "ai engineer", "automation", "ict"],
+    "sales": ["sales", "business development", "retail", "agent", "marketing"],
+    "admin": ["admin", "assistant", "clerical", "office support", "hr", "human resource", "people", "culture", "receptionist"],
+    "accountant": ["accountant", "finance", "audit", "bookkeeping", "accounts"],
+    "driver": ["driver", "driving", "logistics", "rider"],
+    "intern": ["intern", "internship", "trainee"],
+    "attachment": ["attachment", "attach", "attachment", "attach"]
+}
+
+# --- Mock Database of Real, Curated Jobs ---
 MOCK_JOBS_LIST = [
     # Tech
     "*Software Developer* at Buy Domain Kenya - https://www.brightermonday.co.ke/listings/software-developer-4nznmv",
@@ -23,6 +34,7 @@ MOCK_JOBS_LIST = [
     "*Junior Software Developer* at International Livestock Research Institute (ILRI) - https://www.fuzu.com/job?page=1&filters[job_id]=746512",
     "*Head of ICT, Data Systems and Digital Transformation* at International Livestock Research Institute (ILRI) - https://www.fuzu.com/job?filters[job_id]=743338&page=1",
     "*System Administrator* at Sipranda Capital Limited- https://www.fuzu.com/job?filters[job_id]=742815&page=1",
+    "*DevOps Engineer* at Confidential Co.- https://www.linkedin.com/jobs/view/4293733758/?alternateChannel=search&eBP=NOT_ELIGIBLE_FOR_CHARGING&refId=5vJZIbb2tEMN1fbaNREN6A%3D%3D&trackingId=k1qFuRL2SSijvMSAfcB%2FbQ%3D%3D",
 
     # Accountant
     "*Accountant* at Burhani Engineers Ltd - https://www.fuzu.com/kenya/jobs/accountant-burhani-engineers-ltd",
@@ -83,25 +95,31 @@ MOCK_JOBS_LIST = [
     "*Intern - Better Migration Management (BMM) Programme* at GIZ KE - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=746825&page=2",
     "*Intern - Information Systems Auditor at d.light SOLAR- https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=746800&page=2",
     "*Intern - Public Health, Social Sciences, Community Development, Project Management* at EcoBana - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=747969&page=2",
-    
 
 ]
 
-
-
-async def fetch_jobs(job_title: str) -> Optional[List[str]]:
+async def fetch_jobs(user_interest: str) -> list[str] | None:
     """
-    Fetches job listings by performing a keyword search on the mock database.
+    Fetches job listings from the mock database using an intelligent keyword search.
     """
-    logging.info(f"Fetching mock jobs for keyword: '{job_title}'")
+    logging.info(f"Fetching jobs for user interest: '{user_interest}'")
+    user_interest = user_interest.lower()
+    found_jobs = []
     
-    search_term = job_title.lower()
+    # Determine the list of keywords to search for
+    search_terms = INTEREST_KEYWORDS.get(user_interest, [user_interest])
     
-    # Find all jobs in the list that contain the search term
-    found_jobs = [job for job in MOCK_JOBS_LIST if search_term in job.lower()]
-    
+    logging.info(f"Using smart search terms: {search_terms}")
+
+    for job in MOCK_JOBS_LIST:
+        for term in search_terms:
+            if term in job.lower():
+                found_jobs.append(job)
+                break # Avoid adding the same job multiple times
+                
     if not found_jobs:
-        logging.warning(f"No mock jobs found for keyword '{job_title}'")
-        return []
+        logging.warning(f"No jobs found for interest: '{user_interest}' with terms: {search_terms}")
+        return None
         
     return found_jobs
+
