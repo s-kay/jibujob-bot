@@ -20,9 +20,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # --- Smarter Keyword Mapping ---
 # This makes our search more intelligent.
 INTEREST_KEYWORDS = {
-    "it": ["it", "software", "developer", "tech", "engineer"],
+    "it": ["it", "software", "developer", "tech", "engineer", "SOC", "support", "AI engineer", "automation"],
     "sales": ["sales", "business development", "retail", "agent"],
-    "admin": ["admin", "assistant", "clerical", "office support"],
+    "admin": ["admin", "assistant", "clerical", "office support", "HR", "Human Resource", "People","Culture"],
     "accountant": ["accountant", "finance", "audit", "bookkeeping"],
     "driver": ["driver", "driving", "logistics"]
     # Add more mappings as needed
