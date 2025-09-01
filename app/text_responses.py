@@ -9,11 +9,11 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
     """
     if is_new_user:
         greetings = [
-            f"Hi {user_name}, it's great to meet you! I'm Riziki, your new career companion.",
-            f"Sasa {user_name}! It's great to meet you. My name is Riziki, and I'm here to help you on your career journey.",
-            f"Karibu {user_name}! I'm Riziki, your personal guide to jobs and skills in Kenya.",
+            f"Hi {user_name}, it's great to meet you! I'm Riziki, ",
+            f"Sasa {user_name}! It's great to meet you. My name is Riziki, ",
+            f"Karibu {user_name}! I'm Riziki, ",
         ]
-        introduction = "I can help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara)."
+        introduction = "I'm here to help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara)."
         return (random.choice(greetings), introduction)
     else:
         greetings = [
@@ -53,7 +53,8 @@ def get_empathetic_response(context: str, listings: List[str] = [], interest: Op
     interest_text = f"*{interest}*" if interest else "your topic"
 
     responses = {
-        "searching": [ f"Okay, let me check the latest opportunities for {interest_text}. One moment..." ],
+        "searching": [ f"Okay, let me check the latest opportunities for {interest_text}. One moment...", f"Searching for *{interest}* listings for you now. Hang tight!",
+            f"Let's see what we can find for *{interest}*...", ],
         "api_error": [ "Apologies, I'm having a little trouble connecting to our services right now. Could you please try again in a few minutes?" ],
         "jobs_found": [ f"Alright, I found a few promising roles for {interest_text}! Here’s what I’ve got:" ],
         "no_jobs_found": [ f"Hmm, it looks like there aren't any open roles for {interest_text} right now. That's okay! I'll keep an eye out and can alert you when one is posted." ],
