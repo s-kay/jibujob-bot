@@ -14,6 +14,15 @@ MOCK_JOBS_LIST = [
     "*Core Network Support Engineer - Packet Core* at Safaricom Kenya - https://www.myjobmag.co.ke/job/core-network-support-engineer-packet-core-safaricom-kenya-2",
     "*Senior Systems and Support Engineer* at Poa Internet- https://www.myjobmag.co.ke/job/senior-systems-and-support-engineer-poa-internet-1",
     "*Tier 2 Security Operations Centre (SOC) Analyst* at NTT Ltd - https://www.myjobmag.co.ke/job/tier-2-security-operations-centre-soc-analyst-ntt-ltd-3",
+    "*Back-End Developer* at Corporate Staffing Services Ltd - https://www.brightermonday.co.ke/listings/flutter-back-end-developer-84e46p",
+    "*AI Automation Enginee* at Silicon Savannah Services LLC - https://www.brightermonday.co.ke/listings/ai-automation-engineer-wpv2xj",
+    "*FullStack Developer* at Prodvestor - https://www.brightermonday.co.ke/listings/fullstack-developer-7we8pq",
+    "*IT Service Desk Analyst* at BrighterMonday Consulting - https://www.brightermonday.co.ke/listings/it-service-desk-analyst-5de4qr",
+    "*Frontend Developer (Web)* at Prestine HR-Engine Ltd- https://www.brightermonday.co.ke/listings/frontend-developer-web-mg2zeq",
+    "*IT Officer* at ACCOR - https://www.fuzu.com/job?page=1&filters[job_id]=746507",
+    "*Junior Software Developer* at International Livestock Research Institute (ILRI) - https://www.fuzu.com/job?page=1&filters[job_id]=746512",
+    "*Head of ICT, Data Systems and Digital Transformation* at International Livestock Research Institute (ILRI) - https://www.fuzu.com/job?filters[job_id]=743338&page=1",
+    "*System Administrator* at Sipranda Capital Limited- https://www.fuzu.com/job?filters[job_id]=742815&page=1",
 
     # Accountant
     "*Accountant* at Burhani Engineers Ltd - https://www.fuzu.com/kenya/jobs/accountant-burhani-engineers-ltd",
@@ -33,7 +42,14 @@ MOCK_JOBS_LIST = [
     "*Operations and Administration Assistant* at WUSC - https://www.fuzu.com/kenya/jobs/operations-and-administration-assistant-wusc-nairobi",
     "*Personal Assistant, Finance & Operations Administrator* at The Nairobi Women's Hospital - https://www.fuzu.com/kenya/jobs/personal-assistant-finance-operations-administrator",
     "*Operations Assistant* at EmpowerU HR Solutions- https://www.myjobmag.co.ke/job/operations-assistant-empoweru-hr-solutions",
-    "*Executive Assistant* at INUA AI - https://www.myjobmag.co.ke/job/executive-assistant-inua-ai"
+    "*Executive Assistant* at INUA AI - https://www.myjobmag.co.ke/job/executive-assistant-inua-ai",
+    "*Human Resource Manager* at ADORA PRODUCTS LIMITED - https://www.brightermonday.co.ke/listings/human-resource-manager-xp08qj",
+    "*HR Generalist* at  Manufacturing Industry - https://www.brightermonday.co.ke/listings/hr-generalist-manufacturing-industry-r8p8vx",
+    "*HR Manager* at Elite Sounds Ltd - https://www.brightermonday.co.ke/listings/position-title-hr-manager-r8prxq",
+    "*HR Officer* at Quality Meat Packers Ltd. - https://www.brightermonday.co.ke/listings/hr-officer-encouraging-female-candidates-7wejq5",
+    "*SENIOR MANAGER-PEOPLE & CULTURE* Corporate Staffing Services Ltd - https://www.brightermonday.co.ke/listings/senior-manager-people-culture-4nz4k9",
+    "*People and Culture Officer III* at International Livestock Research Institute (ILRI) -https://www.fuzu.com/job?filters[job_id]=745143&page=1",
+
 
 
     #Technical
@@ -47,13 +63,28 @@ MOCK_JOBS_LIST = [
     "*Service Technician* at Ecolab - https://www.fuzu.com/job?filters[country_id]=1&filters[term]=mechanic&filters[job_id]=744109&page=2",
     "*Underwriting and Claims Assistant* at MNS Risk and Insurance Brokers Ltd - https://www.myjobmag.co.ke/job/underwriting-and-claims-assistant-mns-risk-and-insurance-brokers-ltd",
     "*Crane Operator* at Safal Group - https://www.myjobmag.co.ke/job/crane-operator-safal-group-4",
+    "*FIELD TECHNICIAN - POWER & INFRASTRUCTURE MAINTENANCE* at Broadband Communication Networks Ltd - https://www.brightermonday.co.ke/listings/field-technician-power-infrastructure-maintenance-q2jzqe",
+    "*Fiber Technician* at NAMONET SOLUTION LIMITED - https://www.brightermonday.co.ke/listings/fiber-technician-wp4d4k",
 
+
+
+    
     #Hospitality
     "*Gym Instructor* at Enchula Resort - https://www.myjobmag.co.ke/job/gym-instructor-enchula-resort",
     "*Masseuse* at Enchula Resort - https://www.myjobmag.co.ke/job/masseuse-enchula-resort",
     "*Waiter/Waitress* at Sarova Hotels - https://www.myjobmag.co.ke/job/waiter-waitress-sarova-hotels",
     "*Housekeeping Supervisor* at Kempinski - https://www.myjobmag.co.ke/job/housekeeping-supervisor-kempinski",
-    "*Front Office Assistant* at Marriott - https://www.myjobmag.co.ke/job/front-office-assistant-marriott"
+    "*Front Office Assistant* at Marriott - https://www.myjobmag.co.ke/job/front-office-assistant-marriott",
+
+
+    #Internship and attachements
+    "*Intern - Practice and Policy Research* at UN-Habitat - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=747971&page=1",
+    "*Intern - Logistics / Supply Chain Intern* at MSVL GROUP - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=743086&page=1",
+    "*Intern - Better Migration Management (BMM) Programme* at GIZ KE - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=746825&page=2",
+    "*Intern - Information Systems Auditor at d.light SOLAR- https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=746800&page=2",
+    "*Intern - Public Health, Social Sciences, Community Development, Project Management* at EcoBana - https://www.fuzu.com/job?filters[term]=INTERN&filters[job_id]=747969&page=2",
+    
+
 ]
 
 
