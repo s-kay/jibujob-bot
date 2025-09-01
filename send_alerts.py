@@ -24,7 +24,9 @@ INTEREST_KEYWORDS = {
     "sales": ["sales", "business development", "retail", "agent"],
     "admin": ["admin", "assistant", "clerical", "office support", "HR", "Human Resource", "People","Culture"],
     "accountant": ["accountant", "finance", "audit", "bookkeeping"],
-    "driver": ["driver", "driving", "logistics"]
+    "driver": ["driver", "driving", "logistics"],
+    "intern": ["intern", "internship", "trainee"],
+    "attachment": ["attachment", "attach", "attachment", "attach"],
     # Add more mappings as needed
 }
 
