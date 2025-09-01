@@ -9,9 +9,9 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
     """
     if is_new_user:
         greetings = [
-            f"Hi {user_name}, it's great to meet you! I'm KaziLeo, your new career companion.",
-            f"Sasa {user_name}! It's great to meet you. My name is KaziLeo, and I'm here to help you on your career journey.",
-            f"Karibu {user_name}! I'm KaziLeo, your personal guide to jobs and skills in Kenya.",
+            f"Hi {user_name}, it's great to meet you! I'm Riziki, your new career companion.",
+            f"Sasa {user_name}! It's great to meet you. My name is Riziki, and I'm here to help you on your career journey.",
+            f"Karibu {user_name}! I'm Riziki, your personal guide to jobs and skills in Kenya.",
         ]
         introduction = "I can help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara)."
         return (random.choice(greetings), introduction)
