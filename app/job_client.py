@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO)
 # --- Smarter Keyword Mapping ---
 # This dictionary helps the bot understand related terms.
 INTEREST_KEYWORDS = {
-    "it": ["it", "software", "developer", "tech", "engineer", "soc", "support", "ai engineer", "automation", "ict"],
+    "it": ["it", "software", "developer", "tech", "engineer", "soc", "support", "ai engineer", "automation", "ict", "software development"],
     "sales": ["sales", "business development", "retail", "agent", "marketing"],
     "admin": ["admin", "assistant", "clerical", "office support", "hr", "human resource", "people", "culture", "receptionist"],
     "accountant": ["accountant", "finance", "audit", "bookkeeping", "accounts"],
