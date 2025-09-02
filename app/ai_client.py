@@ -109,6 +109,6 @@ async def generate_cover_letter(cv_data: str, company: str, role: str, job_descr
     5.  End with a strong closing statement expressing excitement for the opportunity and a call to action.
     6.  Use a professional sign-off with the user's full name from their CV.
     7.  The entire cover letter must be under 3000 characters.
-    8.  Do not include placeholders like "[Your Contact Info]". The body of the letter is sufficient.
+    8.  Do include placeholders like "[Your Contact Info]".
     """
     return await get_ai_response(system_prompt, user_prompt)
