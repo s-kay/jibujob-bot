@@ -15,24 +15,49 @@ CV_QUESTIONS = [
     ("experience", 
      "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
      "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"),
-    ("skills", 
-     "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
-     "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"),
     ("education", 
      "Almost done! What is your highest qualification and where did you get it? "
      "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"),
+    ("certifications",
+     "Do you have any relevant certifications? If so, please list them. "
+     "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"),
+    ("Projects",
+     "Have you worked on any notable projects? If so, please describe them briefly. "
+     "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"),
+    ("skills", 
+     "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
+     "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"),
+    ("referees",
+     "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
+     "For example: 'John Doe, johndoe@email.com, +254712345678'"),
+
 ]
 
-def format_cv(cv_data: dict) -> str:
+from typing import Tuple, Optional  # <-- Add Optional import
+from . import models
+
+# ...existing code...
+
+def format_cv(cv_data: Optional[dict]) -> str:
     """Formats the collected data into a clean, ATS-friendly text CV."""
-    
+    if not cv_data:
+        return "*No CV data provided.*"
+
+    # Centered profile info
+    name = cv_data.get('full_name', 'N/A')
+    email = cv_data.get('email', 'N/A')
+    phone = cv_data.get('phone', 'N/A')
+    links = cv_data.get('links', 'N/A')
+
+    profile_line = f"{email} | {phone} | {links}"
+
     cv = f"""
 *--- YOUR ATS-FRIENDLY CV ---*
 
-*Name:* {cv_data.get('full_name', 'N/A')}
-*Email:* {cv_data.get('email', 'N/A')}
-*Phone:* {cv_data.get('phone', 'N/A')}
-*Links:* {cv_data.get('links', 'N/A')}
+<center>
+*{name}*
+{profile_line}
+</center>
 
 *--- Professional Summary ---*
 {cv_data.get('summary', 'N/A')}
@@ -40,11 +65,20 @@ def format_cv(cv_data: dict) -> str:
 *--- Work Experience ---*
 {cv_data.get('experience', 'N/A')}
 
+*--- Education ---*
+{cv_data.get('education', 'N/A')}
+
+*--- Certifications ---*
+{cv_data.get('certifications', 'N/A')}
+
+*--- Projects ---*
+{cv_data.get('Projects', 'N/A')}
+
 *--- Skills ---*
 {cv_data.get('skills', 'N/A')}
 
-*--- Education ---*
-{cv_data.get('education', 'N/A')}
+*--- Referees ---*
+{cv_data.get('referees', 'N/A')}
 
 *--------------------*
 This CV is optimized for automated systems. You can now copy this text and use it in your applications!
@@ -56,7 +90,7 @@ def handle_resume_conversation(session: models.UserSession, message_text: str) -
     Manages the CV building conversation with a review-and-edit loop.
     Returns the reply message and a boolean indicating if the flow is complete.
     """
-    cv_data = session.resume_data
+    cv_data = session.resume_data or {}  # <-- Ensure cv_data is always a dict
     state = session.session_data
     
     # --- Handle the Review/Edit Step ---
