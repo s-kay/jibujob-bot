@@ -12,7 +12,8 @@ INTEREST_KEYWORDS = {
     "accountant": ["accountant", "finance", "audit", "bookkeeping", "accounts"],
     "driver": ["driver", "driving", "logistics", "rider"],
     "intern": ["intern", "internship", "trainee"],
-    "attachment": ["attachment", "attach", "attachment", "attach"]
+    "attachment": ["attachment", "attach", "attachment", "attach"],
+    "technical": ["technical", "tech", "engineering", "it", "electrical","mechanical","civil","plumbing", "construction","welder", "fabrication","construction","artisan"]
 }
 
 # --- Mock Database of Real, Curated Jobs ---
@@ -77,6 +78,9 @@ MOCK_JOBS_LIST = [
     "*Crane Operator* at Safal Group - https://www.myjobmag.co.ke/job/crane-operator-safal-group-4",
     "*FIELD TECHNICIAN - POWER & INFRASTRUCTURE MAINTENANCE* at Broadband Communication Networks Ltd - https://www.brightermonday.co.ke/listings/field-technician-power-infrastructure-maintenance-q2jzqe",
     "*Fiber Technician* at NAMONET SOLUTION LIMITED - https://www.brightermonday.co.ke/listings/fiber-technician-wp4d4k",
+    "*Construction Skilled Worker - Plumber* at Victory Farms - https://www.myjobmag.co.ke/job/construction-skilled-worker-plumber-victory-farms",
+    "*Artisan III, (Plumber/Pipe Fitter)* at Kwale County Government - https://www.myjobmag.co.ke/job/artisan-iii-plumber-pipe-fitter-3-posts-kwale-county-government",
+    "*Welder* at Brookhill Projects - https://www.myjobmag.co.ke/job/welder-brookhill-projects"
 
 
 
@@ -87,6 +91,8 @@ MOCK_JOBS_LIST = [
     "*Waiter/Waitress* at Sarova Hotels - https://www.myjobmag.co.ke/job/waiter-waitress-sarova-hotels",
     "*Housekeeping Supervisor* at Kempinski - https://www.myjobmag.co.ke/job/housekeeping-supervisor-kempinski",
     "*Front Office Assistant* at Marriott - https://www.myjobmag.co.ke/job/front-office-assistant-marriott",
+    "*Waiter* at Zale Lounge - https://www.myjobmag.co.ke/job/waiter-3-zale-lounge",
+    "*Food and Beverage Supervisor* at Emerge Egress Consulting - https://www.myjobmag.co.ke/job/food-and-beverage-supervisor-eastern-emerge-egress-consulting",
 
 
     #Internship and attachements
