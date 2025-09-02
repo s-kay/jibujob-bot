@@ -253,16 +253,45 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
     elif message_text == "7" or session.current_menu == "cover_letter":
-        if message_text == "7" and session.current_menu == "main":
-            if not session.resume_data or not session.resume_data.get('full_name'):
-                reply = "It's best to build a CV first so I have your details. Please choose option 5 from the menu to create your CV, then come back here!"
+        session.current_menu = "cover_letter"
+        # Check if we are at the final step of collecting the job description
+        if state.get("cover_letter_step") == 3:
+            job_description = message_text_original
+            await whatsapp_client.send_whatsapp_message(session.phone_number, "Excellent! Let me craft a professional cover letter for you based on your CV and this job description. This AI-powered step might take a moment...")
+            
+            if session.resume_data and session.cover_letter_data:
+                cv_text = resume_builder.format_cv(session.resume_data)
+                company = session.cover_letter_data.get("company_name", "the company")
+                role = session.cover_letter_data.get("job_role", "the role")
+                
+                letter = await ai_client.generate_cover_letter(cv_text, company, role, job_description)
+                
+                if letter:
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, letter)
+                    state["awaiting_similar_jobs_confirm"] = True
+                    reply = f"I can also search for other jobs similar to '{role}'. Would you like me to do that now? (yes/no)"
+                else:
+                    reply = "Sorry, I had a little trouble generating the letter right now. Please try again in a moment."
+
+                session.current_menu = "main"; reset_flags()
                 await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-                return
-            session.current_menu = "cover_letter"; session.cover_letter_data = {}; reset_flags(); message_text = "" 
-        reply, is_complete = cover_letter_generator.handle_cover_letter_conversation(session, message_text)
-        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-        if is_complete: pass
+            else:
+                await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, some of your data was missing. Let's start over.")
+                session.current_menu = "main"; state.clear()
+                await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+
+        else: # Handle the initial steps of the conversation
+            if message_text == "7" and session.current_menu == "main":
+                if not session.resume_data or not session.resume_data.get('full_name'):
+                    reply = "It's best to build a CV first so I have your details. Please choose option 5 from the menu to create your CV, then come back here!"
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                    return
+                session.current_menu = "cover_letter"; session.cover_letter_data = {}; reset_flags(); message_text = ""
+
+            reply, is_complete = cover_letter_generator.handle_cover_letter_conversation(session, message_text)
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
+        
         
     elif message_text == "8" or session.current_menu == "cv_optimizer":
         if state.get("awaiting_rewrite_confirm"):
