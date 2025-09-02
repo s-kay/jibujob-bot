@@ -2,32 +2,31 @@ from app import models
 
 def handle_cover_letter_conversation(session: models.UserSession, message: str) -> tuple[str, bool]:
     """
-    Manages the multi-step conversation to gather information for the AI cover letter generator.
-    Returns the reply to the user and a flag indicating if the conversation is complete.
+    Manages the multi-step conversation for the AI cover letter generator.
+    Returns the bot's reply and a flag indicating if the process is complete.
     """
-    state = session.session_data
-    step = state.get("cover_letter_step", 0)
-    # Ensure cover_letter_data is initialized
-    if 'cover_letter_data' not in session or not session.cover_letter_data:
+    # THE FIX IS HERE: This defensive check ensures cover_letter_data is a dict,
+    # satisfying the type checker and preventing potential runtime errors.
+    if session.cover_letter_data is None:
         session.cover_letter_data = {}
 
-    if step == 0:  # Ask for company name
-        state["cover_letter_step"] = 1
-        return "Let's get started on your cover letter. First, what is the name of the company you are applying to?", False
+    state = session.cover_letter_data
+    step = state.get("step", 0)
 
-    elif step == 1:  # Ask for job role
-        if session.cover_letter_data is not None:
-            session.cover_letter_data["company_name"] = message
-        state["cover_letter_step"] = 2
-        return f"Got it, the company is *{message}*. Now, what is the exact job role you are applying for?", False
-
-    elif step == 2:  # Ask for job description
-        if session.cover_letter_data is not None:
-            session.cover_letter_data["job_role"] = message
-        state["cover_letter_step"] = 3
-        return "Perfect. The final step is to paste the full job description. This will help me tailor the letter specifically for this role.", False
+    if step == 0:
+        state["step"] = 1
+        return "Let's get started on your cover letter. What is the name of the company you are applying to?", False
     
-    # The final step (handling the job description) is managed in services.py
-    # This function should not be called at that stage.
-    return "Sorry, something went wrong with the cover letter process.", True
+    elif step == 1:
+        state["company_name"] = message
+        state["step"] = 2
+        return "Got it. And what is the exact job role you are applying for? (e.g., 'Junior Accountant')", False
+        
+    elif step == 2:
+        state["job_role"] = message
+        state["step"] = 3
+        return "Perfect. Finally, please paste the full job description here. The more detail, the better the result!", False
 
+    # The final step is handled in services.py, so this function is complete.
+    # We return an empty reply and a "True" flag to signal completion.
+    return "", True
