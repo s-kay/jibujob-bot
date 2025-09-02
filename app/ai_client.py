@@ -83,3 +83,32 @@ async def rewrite_cv_sections(cv_text: str, job_description: str, feedback: str)
     if rewritten_sections:
         return f"*--- AI-Suggested Rewrite ---*\n\nHere are the updated sections for your CV:\n\n{rewritten_sections}"
     return None
+
+
+async def generate_cover_letter(cv_data: str, company: str, role: str, job_description: str) -> str | None:
+    """Uses a generative AI to create a tailored cover letter."""
+    system_prompt = (
+        "You are an expert Kenyan career coach named KaziLeo. Your task is to write a professional, concise, and impactful cover letter for a user applying for a job."
+    )
+    user_prompt = f"""
+    **User's CV:**
+    ---
+    {cv_data}
+    ---
+
+    **Job Details:**
+    - Company: {company}
+    - Role: {role}
+    - Job Description: {job_description}
+
+    **Instructions:**
+    1.  Start with a professional greeting addressing the hiring manager (or "Hiring Team" if no name is available).
+    2.  In the first paragraph, clearly state the position being applied for and where it was seen (if applicable, otherwise omit).
+    3.  In the body paragraphs, highlight 2-3 key skills or experiences from the user's CV that directly match the requirements in the job description. Use strong action verbs and quantify achievements.
+    4.  Keep the tone professional but enthusiastic.
+    5.  End with a strong closing statement expressing excitement for the opportunity and a call to action.
+    6.  Use a professional sign-off with the user's full name from their CV.
+    7.  The entire cover letter must be under 3000 characters.
+    8.  Do not include placeholders like "[Your Contact Info]". The body of the letter is sufficient.
+    """
+    return await get_ai_response(system_prompt, user_prompt)
