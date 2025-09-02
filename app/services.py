@@ -7,8 +7,8 @@ async def process_message(db: Session, session: models.UserSession, message_text
     """
     Main business logic handler for processing user messages with persistence.
     """
-    message_text_original = message_text # Keep original case for saving, but use lower for logic
-    message_text = message_text.strip().lower()
+    message_text_original = message_text.strip()
+    message_text = message_text_original.lower()
     state = session.session_data
 
     def reset_flags():
@@ -78,14 +78,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
         
     if state.get("awaiting_similar_jobs_confirm"):
-        job_role = session.cover_letter_data.get("job_role") if session.cover_letter_data else None
+        job_role = state.get("last_cover_letter_role")
         if message_text in ["yes", "y"] and job_role:
             session.job_interest = job_role
             await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_empathetic_response("searching", interest=job_role))
             listings = await job_client.fetch_jobs(job_role)
-            reply = text_responses.get_empathetic_response("jobs_found" if listings else "no_jobs_found", listings=listings or [], interest=job_role)
+            reply = text_responses.get_empathetic_response("jobs_found", listings=listings or [], interest=job_role)
         else:
-            reply = "No problem! Let me know what you'd like to do next."
+            reply = "No problem! Best of luck with your application. Let me know what you'd like to do next."
         session.current_menu = "main"; reset_flags()
         reply += f"\n\n{text_responses.get_main_menu()}"
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
@@ -252,16 +252,18 @@ async def process_message(db: Session, session: models.UserSession, message_text
             session.current_menu = "main"; await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
-    elif message_text == "7" or session.current_menu == "cover_letter":
-        # THE FIX IS HERE: This logic is now self-contained and robust.
+    elif session.current_menu == "cover_letter":
         # This is the entry point for the flow
-        if message_text == "7" or (message_text == "" and not state):
+        if message_text == "" and not state:
             if not session.resume_data or not session.resume_data.get('full_name'):
                 reply = "It's best to build a CV first so I have your details. Please choose option 5 from the menu to create your CV, then come back here!"
                 session.current_menu = "main" 
-            else:
-                session.cover_letter_data = {}; reset_flags()
-                reply, _ = cover_letter_generator.handle_cover_letter_conversation(session, "")
+                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                return
+
+            session.cover_letter_data = {}; reset_flags()
+            reply, _ = cover_letter_generator.handle_cover_letter_conversation(session, "")
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         else:
             # This handles all subsequent steps
             reply, is_complete = cover_letter_generator.handle_cover_letter_conversation(session, message_text_original)
@@ -280,24 +282,20 @@ async def process_message(db: Session, session: models.UserSession, message_text
                     if letter:
                         await whatsapp_client.send_whatsapp_message(session.phone_number, letter)
                         state["awaiting_similar_jobs_confirm"] = True
-                        reply = f"I can also search for other jobs similar to '{role}'. Would you like me to do that now? (yes/no)"
+                        state["last_cover_letter_role"] = role # Save the role for the next step
+                        final_reply = f"I can also search for other jobs similar to '{role}'. Would you like me to do that now? (yes/no)"
                     else:
-                        reply = "Sorry, I had a little trouble generating the letter right now. Please try again in a moment."
-                    
-                    session.current_menu = "main"
-                    # We clear the state AFTER asking the final question.
-                    if not state.get("awaiting_similar_jobs_confirm"):
-                        reset_flags()
-                else:
-                    reply = "Sorry, some of your data was missing. Let's start over."
-                    session.current_menu = "main"; state.clear()
-            else:
-                # This ensures we don't send an empty message
-                if not reply:
-                    session.current_menu = "main"
-                    reply = text_responses.get_main_menu()
+                        final_reply = "Sorry, I had a little trouble generating the letter right now. Please try again in a moment."
+                        session.current_menu = "main"; reset_flags()
 
-        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+                else:
+                    final_reply = "Sorry, some of your data was missing. Let's start over."
+                    session.current_menu = "main"; state.clear()
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+            else:
+                # This handles sending the next question in the sequence
+                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
         
