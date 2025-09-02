@@ -290,9 +290,9 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 session.current_menu = "main"; reset_flags()
                 await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
             else:
-                 await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, some of your data was missing. Let's start over.")
-                 session.current_menu = "main"; state.clear()
-                 await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+                session.current_menu = "main"; state.clear()
+                reply = "Hmm! It seems I don't have all the information I need from your CV or job description. Let's try again later."
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
         
