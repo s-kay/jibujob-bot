@@ -252,7 +252,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
             session.current_menu = "main"; await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
-    elif session.current_menu == "cover_letter":
+    elif message_text == "7" or session.current_menu == "cover_letter":
         # THE FIX IS HERE: This logic is now self-contained and robust.
         # This is the entry point for the flow
         if message_text == "7" or (message_text == "" and not state):
