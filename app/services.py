@@ -65,7 +65,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
 
         
 
-    # --- Specialized Handlers (Second Priority) ---
+     # --- Specialized Handlers (Second Priority) ---
     if state.get("awaiting_training_suggestion_confirm"):
         skill_to_learn = state.get("skill_suggestion")
         if message_text in ["yes", "y"] and skill_to_learn:
@@ -283,15 +283,50 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
     elif message_text == "7" or session.current_menu == "cover_letter":
-        if message_text == "7" and session.current_menu == "main":
+        # THE FIX IS HERE: Rewritten with a stable, sequential logic pattern.
+        # This is the entry point for the flow
+        if (message_text == "7" and session.current_menu == "main") or (message_text == "" and session.current_menu == "cover_letter" and not state):
             if not session.resume_data or not session.resume_data.get('full_name'):
                 reply = "It's best to build a CV first so I have your details. Please choose option 5 from the menu to create your CV, then come back here!"
+                session.current_menu = "main" 
                 await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
                 return
-            session.current_menu = "cover_letter"; session.cover_letter_data = {}; reset_flags(); message_text = "" 
-        reply, is_complete = cover_letter_generator.handle_cover_letter_conversation(session, message_text_original)
-        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-        if is_complete: pass
+
+            session.current_menu = "cover_letter"; session.cover_letter_data = {}; reset_flags()
+            reply, _ = cover_letter_generator.handle_cover_letter_conversation(session, "")
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
+        else: # This handles all subsequent steps
+            reply, is_complete = cover_letter_generator.handle_cover_letter_conversation(session, message_text_original)
+
+            if is_complete:
+                await whatsapp_client.send_whatsapp_message(session.phone_number, "Excellent! Let me craft a professional cover letter for you. This AI-powered step might take a moment...")
+                
+                if session.resume_data and session.cover_letter_data:
+                    cv_text = resume_builder.format_cv(session.resume_data)
+                    company = session.cover_letter_data.get("company_name", "the company")
+                    role = session.cover_letter_data.get("job_role", "the role")
+                    job_description = session.cover_letter_data.get("job_description", "")
+
+                    letter = await ai_client.generate_cover_letter(cv_text, company, role, job_description)
+                    
+                    if letter:
+                        await whatsapp_client.send_whatsapp_message(session.phone_number, letter)
+                        state["awaiting_similar_jobs_confirm"] = True
+                        final_reply = f"I can also search for other jobs similar to '{role}'. Would you like me to do that now? (yes/no)"
+                    else:
+                        final_reply = "Sorry, I had a little trouble generating the letter right now. Please try again in a moment."
+                        session.current_menu = "main"; reset_flags()
+                    
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+                else:
+                    final_reply = "Sorry, some of your data was missing. Let's start over."
+                    session.current_menu = "main"; state.clear()
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+            
+            # This ensures we don't send an empty message from the handler
+            elif reply:
+                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
     elif message_text == "8" or session.current_menu == "cv_optimizer":
