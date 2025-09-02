@@ -13,7 +13,8 @@ INTEREST_KEYWORDS = {
     "driver": ["driver", "driving", "logistics", "rider"],
     "intern": ["intern", "internship", "trainee"],
     "attachment": ["attachment", "attach", "attachment", "attach"],
-    "technical": ["technical", "tech", "engineering", "it", "electrical","mechanical","civil","plumbing", "construction","welder", "fabrication","construction","artisan"]
+    "technical": ["technical", "tech", "engineering", "it", "electrical","mechanical","civil","plumbing", "construction","welder", "fabrication","construction","artisan"],
+    "hospitality": ["hospitality", "hotel", "restaurant", "catering", "food service", "waiter", "chef", "barista", "bartender", "caterer", "interior", "designer"]
 }
 
 # --- Mock Database of Real, Curated Jobs ---
@@ -93,6 +94,8 @@ MOCK_JOBS_LIST = [
     "*Front Office Assistant* at Marriott - https://www.myjobmag.co.ke/job/front-office-assistant-marriott",
     "*Waiter* at Zale Lounge - https://www.myjobmag.co.ke/job/waiter-3-zale-lounge",
     "*Food and Beverage Supervisor* at Emerge Egress Consulting - https://www.myjobmag.co.ke/job/food-and-beverage-supervisor-eastern-emerge-egress-consulting",
+    "*Interior Design Specialist * Prestige Bluestar Holdings Ltd - https://www.myjobmag.co.ke/job/interior-design-specialist-prestige-bluestar-holdings-ltd",
+    "*Interior Design Assistant* at Fast Choice - https://www.myjobmag.co.ke/job/interior-design-assistant-fast-choice-1",
 
 
     #Internship and attachements
