@@ -63,6 +63,20 @@ async def process_message(db: Session, session: models.UserSession, message_text
         elif "ushauri" in message_text: message_text = "3"
         elif "biashara" in message_text: message_text = "4"
 
+
+    if message_text == "1": session.current_menu = "jobs"
+    elif message_text == "2": session.current_menu = "training"
+    elif message_text == "3": session.current_menu = "mentorship"
+    elif message_text == "4": session.current_menu = "entrepreneurship"
+    elif message_text == "5": session.current_menu = "resume_builder"
+    elif message_text == "6": session.current_menu = "interview_practice"
+    elif message_text == "7": session.current_menu = "cover_letter"
+    elif message_text == "8": session.current_menu = "cv_optimizer"
+    elif message_text == "9": session.current_menu = "skills_analyzer"
+        
+    if session.current_menu != "main": message_text = ""
+    
+
     # --- Specialized Handlers (Second Priority) ---
     if state.get("awaiting_training_suggestion_confirm"):
         skill_to_learn = state.get("skill_suggestion")
