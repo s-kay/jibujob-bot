@@ -281,10 +281,11 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
 
         else: # Handle the initial steps of the conversation
-            if message_text == "7" and session.current_menu == "main":
+            if message_text == "7":
                 if not session.resume_data or not session.resume_data.get('full_name'):
                     reply = "It's best to build a CV first so I have your details. Please choose option 5 from the menu to create your CV, then come back here!"
                     await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                    session.current_menu = "main"
                     return
                 session.current_menu = "cover_letter"; session.cover_letter_data = {}; reset_flags(); message_text = ""
 
