@@ -1,6 +1,8 @@
 # app/resume_builder.py
-from typing import Tuple
+from typing import Tuple, Optional # 
 from . import models
+import asyncio
+from app.file_handler import upload_text_as_file
 
 # --- ATS-Friendly Questions ---
 # These questions are designed to prompt users for specific, keyword-rich, and quantifiable information.
@@ -33,10 +35,6 @@ CV_QUESTIONS = [
 
 ]
 
-from typing import Tuple, Optional  # <-- Add Optional import
-from . import models
-
-# ...existing code...
 
 def format_cv(cv_data: Optional[dict]) -> str:
     """Formats the collected data into a clean, ATS-friendly text CV."""
@@ -85,59 +83,63 @@ This CV is optimized for automated systems. You can now copy this text and use i
 """
     return cv.strip()
 
-def handle_resume_conversation(session: models.UserSession, message_text: str) -> Tuple[str, bool]:
+async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
     """
-    Manages the CV building conversation with a review-and-edit loop.
-    Returns the reply message and a boolean indicating if the flow is complete.
+    Manages the multi-step conversation for building a CV.
+    Now returns the reply, a potential download link, and a completion flag.
     """
-    cv_data = session.resume_data or {}  # <-- Ensure cv_data is always a dict
-    state = session.session_data
+    state = session.session_data if session.session_data else {}
+    resume_data = session.resume_data if session.resume_data else {}
+    step = state.get("resume_step", 1)
     
-    # --- Handle the Review/Edit Step ---
-    if state.get("awaiting_cv_confirmation"):
-        field_to_confirm = state.get("field_to_confirm")
-        if message_text in ["yes", "correct", "y"]:
-            state.pop("awaiting_cv_confirmation", None)
+    # --- Review and Edit Logic ---
+    field_to_confirm = state.get("field_to_confirm")
+    if field_to_confirm:
+        if "yes" in message.lower():
+            state.pop("field_to_confirm", None) # Clear the confirmation state
+            step += 1 # Move to the next question
+            state["resume_step"] = step
+        elif "no" in message.lower():
             state.pop("field_to_confirm", None)
-            # Fall through to ask the next question
-        elif message_text in ["no", "change", "n"]:
-            if field_to_confirm:
-                cv_data.pop(field_to_confirm, None)
-            state.pop("awaiting_cv_confirmation", None)
-            state.pop("field_to_confirm", None)
-            # Fall through to re-ask the same question
+            if field_to_confirm in resume_data:
+                resume_data.pop(field_to_confirm, None) # Clear the specific answer
+            # Don't increment step, just ask the question again
+            return CV_QUESTIONS[step]["prompt"], None, False
         else:
-            return "Please reply with 'yes' or 'no'.", False
+            return "Please answer with 'yes' or 'no'.", None, False
 
-    # --- Handle a new answer from the user ---
-    previous_question_key = state.get("awaiting_cv_answer_for")
-    if previous_question_key and not state.get("awaiting_cv_confirmation"):
-        if message_text.lower() == 'skip' and previous_question_key == 'experience':
-            cv_data[previous_question_key] = "No formal work experience."
-        else:
-            cv_data[previous_question_key] = message_text
+    # --- Standard Question Flow ---
+    if step > 1: # Save the answer from the previous step
+        prev_step_key = CV_QUESTIONS[step - 1]["key"]
+        resume_data[prev_step_key] = message
         
-        state["awaiting_cv_confirmation"] = True
-        state["field_to_confirm"] = previous_question_key
-        state.pop("awaiting_cv_answer_for", None)
-        confirmation_text = f"I have this down as:\n\n_{cv_data[previous_question_key]}_\n\nIs that correct? (yes/no)"
-        return confirmation_text, False
+        # Ask for confirmation
+        state["field_to_confirm"] = prev_step_key
+        confirmation_prompt = (
+            f"I have your *{prev_step_key.replace('_', ' ').title()}* as:\n"
+            f"_{message}_\n\n"
+            "Is this correct? (yes/no)"
+        )
+        return confirmation_prompt, None, False
 
-    # --- Find and ask the next question ---
-    next_question_key = None
-    for key, _ in CV_QUESTIONS:
-        if key not in cv_data:
-            next_question_key = key
-            break
-            
-    if next_question_key:
-        _, question_text = next((q for q in CV_QUESTIONS if q[0] == next_question_key))
-        state["awaiting_cv_answer_for"] = next_question_key
-        return question_text, False
-    else:
-        # All questions are answered and confirmed, format and return the CV
-        state.pop("awaiting_cv_answer_for", None)
-        state.pop("awaiting_cv_confirmation", None)
-        state.pop("field_to_confirm", None)
-        final_cv = format_cv(cv_data)
-        return final_cv, True
+    # Check if the conversation is complete
+    if step > len(CV_QUESTIONS):
+        # Format the final CV
+        cv_text = format_cv(resume_data)
+        
+        # Generate a unique filename for the user
+        user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+        filename = f"{user_name_part}_CV.txt"
+
+        # Call the file handler to upload the file
+        await asyncio.sleep(1) # Small delay to feel more natural
+        download_link = await upload_text_as_file(cv_text, filename)
+
+        final_message = "Your CV is complete!"
+        return final_message, download_link, True
+
+    # Ask the current question
+    question_info = CV_QUESTIONS[step]
+    state["resume_step"] = step
+    return question_info["prompt"], None, False
+
