@@ -248,10 +248,23 @@ async def process_message(db: Session, session: models.UserSession, message_text
     elif message_text == "5" or session.current_menu == "resume_builder":
         if message_text == "5" and session.current_menu == "main":
             session.current_menu = "resume_builder"; session.resume_data = {}; reset_flags(); message_text = "" 
-        reply, is_complete = resume_builder.handle_resume_conversation(session, message_text_original)
-        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+        reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
+
         if is_complete:
-            session.current_menu = "main"; await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply) # Send "Your CV is complete!"
+            if download_link:
+                final_reply = f"Here is a link to your downloadable CV document:\n{download_link}\n\nThis link is private and will expire in 24 hours."
+            else:
+                final_reply = "Sorry, I had a little trouble creating the downloadable file. I've sent you the plain text version for now."
+                # As a fallback, send the raw text
+                cv_text = resume_builder.format_cv(session.resume_data or {})
+                await whatsapp_client.send_whatsapp_message(session.phone_number, cv_text)
+
+            session.current_menu = "main"
+            final_reply += f"\n\n{text_responses.get_main_menu()}"
+            await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+        else:
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
     elif message_text == "6" or session.current_menu == "interview_practice":
