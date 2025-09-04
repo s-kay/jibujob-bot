@@ -7,34 +7,26 @@ from app import models
 
 # --- ATS-Friendly Questions ---
 # These questions are designed to prompt users for specific, keyword-rich, and quantifiable information.
-CV_QUESTIONS = [
-    ("full_name", {"prompt": "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"}),
-    ("email", {"prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"}),
-    ("phone", {"prompt": "Perfect. And your phone number?"}),
-    ("links", {"prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."}),
-    ("summary", 
-     {"prompt": "Next, let's write a powerful Professional Summary. Describe your main role and top achievement."},
-     "For example: 'Detail-oriented Accountant with 3 years of experience who saved a company KES 500,000 by optimizing budgets.'"),
-    ("experience", 
-     {"prompt": "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
-     "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"}),
-    ("education", 
-     {"prompt": "Almost done! What is your highest qualification and where did you get it? "
-     "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"}),
-    ("certifications",
-     {"prompt": "Do you have any relevant certifications? If so, please list them. "
-     "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"}),
-    ("Projects",
-     {"prompt": "Have you worked on any notable projects? If so, please describe them briefly. "
-     "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"}),
-    ("skills", 
-     {"prompt": "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
-     "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"}),
-    ("referees",
-     {"prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
-     "For example: 'John Doe, johndoe@email.com, +254712345678'"}),
+CV_QUESTIONS = {
+    1: {"key": "full_name", "prompt": "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"},
+    2: {"key": "email", "prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"},
+    3: {"key": "phone", "prompt": "Perfect. And your phone number?"},
+    4: {"key": "links", "prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."},
+    5: {"key": "summary", "prompt": "Next, let's write a powerful Professional Summary. Describe your main role and top achievement."},
+    6: {"key": "experience", "prompt": "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
+        "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"},
+    7: {"key": "education", "prompt": "What is your highest qualification and where did you get it? "
+        "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"},
+    8: {"key": "certifications", "prompt": "Do you have any relevant certifications? If so, please list them. "
+        "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"},
+    9: {"key": "projects", "prompt": "Have you worked on any notable projects? If so, please describe them briefly. "
+        "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"},
+    10: {"key": "skills", "prompt": "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
+        "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"},
+    11: {"key": "referees", "prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
+        "For example: 'John Doe, johndoe@email.com, +254712345678'"},
 
-]
+}
 
 
 # This dictionary maps the user's choice in the editor to the key in the resume data.
