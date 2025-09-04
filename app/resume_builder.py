@@ -8,7 +8,7 @@ from app import models
 # --- ATS-Friendly Questions ---
 # These questions are designed to prompt users for specific, keyword-rich, and quantifiable information.
 CV_QUESTIONS = {
-    1: {"key": "full_name", "prompt": "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"},
+    1: {"key": "full_name", "prompt": "💪🏾 Great start! Let's build a CV that will get you noticed.\n\nFirst, what is your full name?"},
     2: {"key": "email", "prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"},
     3: {"key": "phone", "prompt": "Perfect. And your phone number?"},
     4: {"key": "links", "prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."},
