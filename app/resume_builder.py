@@ -8,31 +8,31 @@ from app import models
 # --- ATS-Friendly Questions ---
 # These questions are designed to prompt users for specific, keyword-rich, and quantifiable information.
 CV_QUESTIONS = [
-    ("full_name", "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"),
-    ("email", "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"),
-    ("phone", "Perfect. And your phone number?"),
-    ("links", "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."),
+    ("full_name", {"prompt": "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"}),
+    ("email", {"prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"}),
+    ("phone", {"prompt": "Perfect. And your phone number?"}),
+    ("links", {"prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."}),
     ("summary", 
-     "Next, let's write a powerful Professional Summary. Describe your main role and top achievement. "
+     {"prompt": "Next, let's write a powerful Professional Summary. Describe your main role and top achievement."},
      "For example: 'Detail-oriented Accountant with 3 years of experience who saved a company KES 500,000 by optimizing budgets.'"),
     ("experience", 
-     "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
-     "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"),
+     {"prompt": "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
+     "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"}),
     ("education", 
-     "Almost done! What is your highest qualification and where did you get it? "
-     "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"),
+     {"prompt": "Almost done! What is your highest qualification and where did you get it? "
+     "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"}),
     ("certifications",
-     "Do you have any relevant certifications? If so, please list them. "
-     "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"),
+     {"prompt": "Do you have any relevant certifications? If so, please list them. "
+     "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"}),
     ("Projects",
-     "Have you worked on any notable projects? If so, please describe them briefly. "
-     "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"),
+     {"prompt": "Have you worked on any notable projects? If so, please describe them briefly. "
+     "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"}),
     ("skills", 
-     "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
-     "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"),
+     {"prompt": "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
+     "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"}),
     ("referees",
-     "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
-     "For example: 'John Doe, johndoe@email.com, +254712345678'"),
+     {"prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
+     "For example: 'John Doe, johndoe@email.com, +254712345678'"}),
 
 ]
 
@@ -181,7 +181,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 # User doesn't want to edit, so we assume they want to start a new one.
                 session.resume_data = {}; resume_data = {}
                 state["resume_step"] = 1
-                return CV_QUESTIONS[1][1], None, False
+                return CV_QUESTIONS[1]["prompt"], None, False
 
     # --- Standard "Create New CV" Flow ---
     else:
@@ -200,5 +200,5 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
 
         question_info = CV_QUESTIONS[step]
         state["resume_step"] = step + 1
-        return question_info[1], None, False
+        return question_info["prompt"], None, False
 
