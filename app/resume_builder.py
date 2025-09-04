@@ -200,5 +200,5 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
 
         question_info = CV_QUESTIONS[step]
         state["resume_step"] = step + 1
-        return question_info["prompt"], None, False
+        return question_info[""], None, False
 
