@@ -3,11 +3,12 @@ from typing import Tuple, Optional #
 from . import models
 import asyncio
 from app.file_handler import upload_text_as_file
+from app import models
 
 # --- ATS-Friendly Questions ---
 # These questions are designed to prompt users for specific, keyword-rich, and quantifiable information.
 CV_QUESTIONS = [
-    ("full_name", "Of course. Let's build a CV that gets noticed. First, what is your full name?"),
+    ("full_name", "Of course. Let's build a CV that gets noticed.\n\nFirst, what is your full name?"),
     ("email", "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"),
     ("phone", "Perfect. And your phone number?"),
     ("links", "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."),
@@ -36,13 +37,35 @@ CV_QUESTIONS = [
 ]
 
 
+# This dictionary maps the user's choice in the editor to the key in the resume data.
+CV_EDITOR_MAP = {
+    "1": {"key": "summary", "name": "Professional Summary"},
+    "2": {"key": "experience", "name": "Work Experience"},
+    "3": {"key": "education", "name": "Education"},
+    "4": {"key": "skills", "name": "Skills"},
+    "5": {"key": "profile", "name": "Profile Info"}, # Special case
+}
+
+def get_editor_menu():
+    """Returns the formatted CV editor sub-menu."""
+    return (
+        "Great! Which part of your CV would you like to update?\n\n"
+        "1. Professional Summary\n"
+        "2. Work Experience\n"
+        "3. Education\n"
+        "4. Skills\n"
+        "5. Profile Info (Phone/Email/links)"
+    )
+        
+
+
 def format_cv(cv_data: Optional[dict]) -> str:
     """Formats the collected data into a clean, ATS-friendly text CV."""
     if not cv_data:
         return "*No CV data provided.*"
 
     # Centered profile info
-    name = cv_data.get('full_name', 'N/A')
+    name = cv_data.get('full_name', 'N/A').upper()
     email = cv_data.get('email', 'N/A')
     phone = cv_data.get('phone', 'N/A')
     links = cv_data.get('links', 'N/A')
@@ -85,61 +108,97 @@ This CV is optimized for automated systems. You can now copy this text and use i
 
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
     """
-    Manages the multi-step conversation for building a CV.
-    Now returns the reply, a potential download link, and a completion flag.
+    Manages the multi-step conversation for building OR editing a CV.
+    Returns the reply, a potential download link, and a completion flag.
     """
     state = session.session_data if session.session_data else {}
     resume_data = session.resume_data if session.resume_data else {}
-    step = state.get("resume_step", 1)
-    
-    # --- Review and Edit Logic ---
-    field_to_confirm = state.get("field_to_confirm")
-    if field_to_confirm:
-        if "yes" in message.lower():
-            state.pop("field_to_confirm", None) # Clear the confirmation state
-            step += 1 # Move to the next question
-            state["resume_step"] = step
-        elif "no" in message.lower():
-            state.pop("field_to_confirm", None)
-            if field_to_confirm in resume_data:
-                resume_data.pop(field_to_confirm, None) # Clear the specific answer
-            # Don't increment step, just ask the question again
-            return CV_QUESTIONS[step]["prompt"], None, False
+
+    # --- Main Router for this flow ---
+    # Are we in the middle of editing a specific section?
+    if state.get("awaiting_cv_update_for"):
+        section_key = state.pop("awaiting_cv_update_for")
+        
+        if section_key == "profile":
+            resume_data["phone_number"] = message.split(",")[0].strip()
+            resume_data["email"] = message.split(",")[1].strip() 
+            resume_data["links"] = message.split(",")[2].strip() if "," in message else ""
         else:
-            return "Please answer with 'yes' or 'no'.", None, False
-
-    # --- Standard Question Flow ---
-    if step > 1: # Save the answer from the previous step
-        prev_step_key = CV_QUESTIONS[step - 1]["key"]
-        resume_data[prev_step_key] = message
+            resume_data[section_key] = message
         
-        # Ask for confirmation
-        state["field_to_confirm"] = prev_step_key
-        confirmation_prompt = (
-            f"I have your *{prev_step_key.replace('_', ' ').title()}* as:\n"
-            f"_{message}_\n\n"
-            "Is this correct? (yes/no)"
-        )
-        return confirmation_prompt, None, False
+        state["awaiting_edit_another_section"] = True
+        editing_section = state.get('editing_section')
+        section_name = CV_EDITOR_MAP[editing_section]['name'] if editing_section in CV_EDITOR_MAP else "Section"
+        return f"✅ Perfect, I've updated your *{section_name}*.\n\nWould you like to edit another section? (yes/no)", None, False
 
-    # Check if the conversation is complete
-    if step > len(CV_QUESTIONS):
-        # Format the final CV
-        cv_text = format_cv(resume_data)
+    # Are we waiting for the user to choose a section to edit?
+    elif state.get("awaiting_editor_choice"):
+        if message in CV_EDITOR_MAP:
+            state.pop("awaiting_editor_choice", None)
+            section_info = CV_EDITOR_MAP[message]
+            state["editing_section"] = message # remember which number they chose
+            state["awaiting_cv_update_for"] = section_info["key"]
+            
+            current_data = ""
+            if section_info["key"] == "contact":
+                current_data = f"{resume_data.get('phone_number', '')}, {resume_data.get('email', '')}"
+                prompt = "Please provide the new Phone Number and Email, separated by a comma."
+            else:
+                current_data = resume_data.get(section_info['key'], 'No data saved yet.')
+                prompt = f"Please provide the new content for your *{section_info['name']}*."
+
+            return f"Okay, here's what I currently have for *{section_info['name']}*:\n_{current_data}_\n\n{prompt}", None, False
+        else:
+            return "Please select a valid number from the menu (1-5).", None, False
+            
+    # Are we waiting to see if they want to edit another section?
+    elif state.get("awaiting_edit_another_section"):
+        state.pop("awaiting_edit_another_section", None)
+        if "yes" in message.lower():
+            state["awaiting_editor_choice"] = True
+            return get_editor_menu(), None, False
+        else:
+            # They are done editing, generate the final CV
+            final_message = "Great! Your CV has been updated."
+            cv_text = format_cv(resume_data)
+            user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+            filename = f"KaziLeo_CV_{user_name_part}.txt"
+            download_link = await upload_text_as_file(cv_text, filename)
+            return final_message, download_link, True
+
+    # --- Initial Entry Point ---
+    # Does a CV already exist?
+    elif resume_data and resume_data.get("full_name"):
+        if not state.get("awaiting_edit_choice"):
+            state["awaiting_edit_choice"] = True
+            return "It looks like you already have a CV with me. Would you like to edit it? (yes/no)", None, False
+        else:
+            state.pop("awaiting_edit_choice", None)
+            if "yes" in message.lower():
+                state["awaiting_editor_choice"] = True
+                return get_editor_menu(), None, False
+            else:
+                # User doesn't want to edit, so we assume they want to start a new one.
+                session.resume_data = {}; resume_data = {}
+                state["resume_step"] = 1
+                return CV_QUESTIONS[1][1], None, False
+
+    # --- Standard "Create New CV" Flow ---
+    else:
+        step = state.get("resume_step", 1)
+        if step > 1:
+            prev_step_key = CV_QUESTIONS[step - 1]["key"]
+            resume_data[prev_step_key] = message
         
-        # Generate a unique filename for the user
-        user_name_part = resume_data.get("full_name", "user").split(" ")[0]
-        filename = f"{user_name_part}_CV.txt"
+        if step > len(CV_QUESTIONS):
+            final_message = "Your CV is complete!"
+            cv_text = format_cv(resume_data)
+            user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+            filename = f"KaziLeo_CV_{user_name_part}.txt"
+            download_link = await upload_text_as_file(cv_text, filename)
+            return final_message, download_link, True
 
-        # Call the file handler to upload the file
-        await asyncio.sleep(1) # Small delay to feel more natural
-        download_link = await upload_text_as_file(cv_text, filename)
-
-        final_message = "Your CV is complete!"
-        return final_message, download_link, True
-
-    # Ask the current question
-    question_info = CV_QUESTIONS[step]
-    state["resume_step"] = step
-    return question_info["prompt"], None, False
+        question_info = CV_QUESTIONS[step]
+        state["resume_step"] = step + 1
+        return question_info["prompt"], None, False
 
