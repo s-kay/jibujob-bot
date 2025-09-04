@@ -251,7 +251,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
 
         if is_complete:
-            await whatsapp_client.send_whatsapp_message(session.phone_number, reply) # Send "Your CV is complete!"
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply) # Send "Your CV is complete!" or "CV has been updated"
             if download_link:
                 final_reply = f"Here is a link to your downloadable CV document:\n{download_link}\n\nThis link is private and will expire in 24 hours."
             else:
