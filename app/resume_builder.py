@@ -49,11 +49,14 @@ def format_cv(cv_data: Optional[dict]) -> str:
     phone = cv_data.get('phone', 'N/A')
     links = cv_data.get('links', 'N/A')
     profile_line = f"{email} | {phone} | {links}"
+
     cv = f"""
 *--- YOUR ATS-FRIENDLY CV ---*
 
+<center>
 *{name}*
 {profile_line}
+</center>
 
 *--- Professional Summary ---*
 {cv_data.get('summary', 'N/A')}
@@ -98,15 +101,12 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     if "step" in state and not state.get("is_complete"):
         current_step = state.get("step", 1)
         
-        # Save the answer from the previous step.
-        # THE FIX for the create loop is here: We process the message for the previous step.
-        # The step in the state always points to the NEXT question to be asked.
-        if message: # This ensures we don't try to save the initial empty message
-            prev_step_to_save = current_step - 1
-            if prev_step_to_save in CV_QUESTIONS:
-                prev_step_key = CV_QUESTIONS[prev_step_to_save]["key"]
-                if message.lower().strip() != 'skip':
-                    state[prev_step_key] = message
+        # Save the answer from the previous step. The 'message' is the answer to the (current_step - 1) question.
+        step_to_save = current_step - 1
+        if step_to_save in CV_QUESTIONS and message:
+            step_key = CV_QUESTIONS[step_to_save]["key"]
+            if message.lower().strip() != 'skip':
+                state[step_key] = message
         
         # Check if we have asked all questions
         if current_step > len(CV_QUESTIONS):
@@ -119,7 +119,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
-        # Ask the current question
+        # Ask the current question and set up for the next turn
         question_info = CV_QUESTIONS[current_step]
         state["step"] = current_step + 1
         return question_info["prompt"], None, False
