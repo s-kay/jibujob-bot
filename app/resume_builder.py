@@ -1,10 +1,8 @@
-# app/resume_builder.py
 from typing import Tuple, Optional
 from . import models
 import asyncio
 from app.file_handler import upload_text_as_file
 
-# --- ATS-Friendly Questions ---
 CV_QUESTIONS = {
     1: {"key": "full_name", "prompt": "💪🏾 Great start! Let's build a CV that will get you noticed.\n\nFirst, what is your full name?"},
     2: {"key": "email", "prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"},
@@ -22,7 +20,6 @@ CV_QUESTIONS = {
     11: {"key": "referees", "prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information. (Type 'skip' if none)"},
 }
 
-# This dictionary maps the user's choice in the editor to the key in the resume data.
 CV_EDITOR_MAP = {
     "1": {"key": "summary", "name": "Professional Summary"},
     "2": {"key": "experience", "name": "Work Experience"},
@@ -32,7 +29,6 @@ CV_EDITOR_MAP = {
 }
 
 def get_editor_menu():
-    """Returns the formatted CV editor sub-menu."""
     return (
         "Great! Which part of your CV would you like to update?\n\n"
         "1. Professional Summary\n"
@@ -79,35 +75,28 @@ def format_cv(cv_data: Optional[dict]) -> str:
     return cv.strip()
 
 def has_existing_cv(resume_data: dict) -> bool:
-    """A CV is considered 'existing' and 'complete' if the 'is_complete' flag is set."""
-    return bool(resume_data and resume_data.get("is_complete"))
+    """A CV is considered 'existing' and 'complete' if the 'is_complete' flag is set and all main fields are present."""
+    required_fields = ["full_name", "email", "phone", "summary", "experience", "education", "skills"]
+    return bool(resume_data and resume_data.get("is_complete") and all(resume_data.get(f) for f in required_fields))
 
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
-    """
-    Manages the multi-step conversation for building OR editing a CV using a single, unified state.
-    """
     if session.resume_data is None:
         session.resume_data = {}
-    
     state = session.resume_data
 
-    # --- PRIORITY 1: Handle an ONGOING conversation ---
-
-    # Is the bot in the middle of CREATING a new CV?
+    # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
-        
-        # Save the answer from the previous step.
-        if message: # This ensures we don't try to save the initial empty message
+        # Save answer from previous step
+        if message and current_step > 1:
             step_to_save = current_step - 1
             if step_to_save in CV_QUESTIONS:
                 prev_step_key = CV_QUESTIONS[step_to_save]["key"]
                 if message.lower().strip() != 'skip':
                     state[prev_step_key] = message
-        
-        # Check if we have asked all questions
+        # Check if done
         if current_step > len(CV_QUESTIONS):
-            state.pop("creation_step")
+            state.pop("creation_step", None)
             state["is_complete"] = True
             final_message = "Your CV is complete!"
             cv_text = format_cv(state)
@@ -115,13 +104,12 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             filename = f"KaziLeo_CV_{user_name_part}.txt"
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
-
-        # Ask the current question and set up for the next turn
+        # Ask next question
         question_info = CV_QUESTIONS[current_step]
         state["creation_step"] = current_step + 1
         return question_info["prompt"], None, False
 
-    # Is the bot in the middle of EDITING an existing CV?
+    # --- Ongoing Editing ---
     elif "editing_step" in state:
         if state["editing_step"] == "awaiting_section_choice":
             if message in CV_EDITOR_MAP:
@@ -129,7 +117,6 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 section_info = CV_EDITOR_MAP[message]
                 state["awaiting_section_update"] = section_info["key"]
                 state["editing_section_name"] = section_info["name"]
-                
                 current_data = ""
                 if section_info["key"] == "profile":
                     current_data = f"{state.get('email', '')}, {state.get('phone', '')}, {state.get('links', '')}"
@@ -144,7 +131,6 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         elif "awaiting_section_update" in state:
             section_key = state.pop("awaiting_section_update")
             section_name = state.pop("editing_section_name", "Section")
-            
             if section_key == "profile":
                 parts = [p.strip() for p in message.split(',')]
                 state["email"] = parts[0] if len(parts) > 0 else ""
@@ -152,7 +138,6 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 state["links"] = parts[2] if len(parts) > 2 else ""
             else:
                 state[section_key] = message
-            
             state["editing_step"] = "awaiting_continue_choice"
             return f"✅ Perfect, I've updated your *{section_name}*.\n\nWould you like to edit another section? (yes/no)", None, False
 
@@ -169,7 +154,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 download_link = await upload_text_as_file(cv_text, filename)
                 return final_message, download_link, True
 
-    # --- PRIORITY 2: Handle the initial entry point (if NO conversation is active) ---
+    # --- Entry Point: No active conversation ---
     else:
         if has_existing_cv(state):
             if "awaiting_edit_choice" not in state:
@@ -181,11 +166,10 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                     state["editing_step"] = "awaiting_section_choice"
                     return get_editor_menu(), None, False
                 else: # User wants to create a new one, erasing the old one
-                    session.resume_data = {"creation_step": 1} 
+                    session.resume_data = {"creation_step": 1}
                     return CV_QUESTIONS[1]["prompt"], None, False
-        else: # No CV exists, so we must start the creation flow
+        else:
             session.resume_data = {"creation_step": 1}
             return CV_QUESTIONS[1]["prompt"], None, False
 
     return "Sorry, something went wrong in the CV builder. Let's return to the main menu.", None, True
-
