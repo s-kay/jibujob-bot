@@ -249,7 +249,8 @@ async def process_message(db: Session, session: models.UserSession, message_text
         if message_text == "5" and session.current_menu == "main":
             session.current_menu = "resume_builder"; session.resume_data = {}; reset_flags(); message_text = "" 
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
-
+        db.add(session)  # Ensure session changes are tracked
+        db.commit()  # Commit after updating resume_data
         if is_complete:
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply) # Send "Your CV is complete!" or "CV has been updated"
             if download_link:
