@@ -49,14 +49,11 @@ def format_cv(cv_data: Optional[dict]) -> str:
     phone = cv_data.get('phone', 'N/A')
     links = cv_data.get('links', 'N/A')
     profile_line = f"{email} | {phone} | {links}"
-
     cv = f"""
 *--- YOUR ATS-FRIENDLY CV ---*
 
-<center>
 *{name}*
 {profile_line}
-</center>
 
 *--- Professional Summary ---*
 {cv_data.get('summary', 'N/A')}
@@ -89,13 +86,10 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     """
     Manages the multi-step conversation for building OR editing a CV using a single, unified state.
     """
-    # Use session.resume_data as the single source of truth for this feature's memory.
     if session.resume_data is None:
         session.resume_data = {}
     
     state = session.resume_data
-
-    # --- THE FIX: A robust logical order that prioritizes ongoing conversations ---
 
     # --- PRIORITY 1: Handle an ONGOING "Create New CV" flow ---
     if "step" in state and not state.get("is_complete"):
@@ -110,8 +104,8 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         
         # Check if we have asked all questions
         if current_step > len(CV_QUESTIONS):
-            state.pop("step") # End the creation flow
-            state["is_complete"] = True # Mark the CV as complete
+            state.pop("step")
+            state["is_complete"] = True
             final_message = "Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
@@ -182,10 +176,10 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 if "yes" in message.lower():
                     state["awaiting_editor_choice"] = True
                     return get_editor_menu(), None, False
-                else: # User wants to create a new one, erasing the old one
-                    session.resume_data = {"step": 1} # Start the creation flow
+                else: 
+                    session.resume_data = {"step": 1} 
                     return CV_QUESTIONS[1]["prompt"], None, False
-        else: # No CV exists, so we must start the creation flow
+        else: 
             session.resume_data = {"step": 1}
             return CV_QUESTIONS[1]["prompt"], None, False
 
