@@ -9,20 +9,17 @@ CV_QUESTIONS = {
     1: {"key": "full_name", "prompt": "💪🏾 Great start! Let's build a CV that will get you noticed.\n\nFirst, what is your full name?"},
     2: {"key": "email", "prompt": "Got it. What's a professional email address for employers to contact you? (e.g., jane.doe@email.com)"},
     3: {"key": "phone", "prompt": "Perfect. And your phone number?"},
-    4: {"key": "links", "prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github)."},
+    4: {"key": "links", "prompt": "Great! Please share any professional links you'd like to include (e.g., LinkedIn, portfolio website, Github). (Type 'skip' if none)"},
     5: {"key": "summary", "prompt": "Next, let's write a powerful Professional Summary. Describe your main role and top achievement."},
     6: {"key": "experience", "prompt": "Now for your Work Experience. Please list your most recent job title, the company, and one key achievement with a number. "
         "For example: 'Accountant, XYZ Corp (2022-2024) - Reduced monthly reporting errors by 15%.'\n\n(Type 'skip' if you have no formal work experience)"},
     7: {"key": "education", "prompt": "What is your highest qualification and where did you get it? "
         "For example: 'Bachelor of Commerce in Finance, University of Nairobi, 2021-2025'"},
-    8: {"key": "certifications", "prompt": "Do you have any relevant certifications? If so, please list them. "
-        "For example: 'Certified Public Accountant (CPA), Project Management Professional (PMP)'"},
-    9: {"key": "projects", "prompt": "Have you worked on any notable projects? If so, please describe them briefly. "
-        "For example: 'Led a team to develop a budgeting tool that reduced costs by 20%.'"},
+    8: {"key": "certifications", "prompt": "Do you have any relevant certifications? If so, please list them. (Type 'skip' if none)"},
+    9: {"key": "projects", "prompt": "Have you worked on any notable projects? If so, please describe them briefly. (Type 'skip' if none)"},
     10: {"key": "skills", "prompt": "Great. Now, list your most important technical and soft skills, separated by commas. Think about keywords from job descriptions. "
         "For example: 'QuickBooks, Financial Reporting, Budgeting, Microsoft Excel, Communication, Problem-Solving'"},
-    11: {"key": "referees", "prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information."
-        "For example: 'John Doe, johndoe@email.com, +254712345678'"},
+    11: {"key": "referees", "prompt": "Finally, do you have any referees you'd like to include? If so, please provide their names and contact information. (Type 'skip' if none)"},
 }
 
 # This dictionary maps the user's choice in the editor to the key in the resume data.
@@ -82,108 +79,109 @@ def format_cv(cv_data: Optional[dict]) -> str:
     return cv.strip()
 
 def has_existing_cv(resume_data: dict) -> bool:
-    """A CV is considered 'existing' if it has a full name."""
-    return bool(resume_data and resume_data.get("full_name"))
+    """A CV is considered 'existing' and 'complete' if the 'is_complete' flag is set."""
+    return bool(resume_data and resume_data.get("is_complete"))
 
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
     """
-    Manages the multi-step conversation for building OR editing a CV.
+    Manages the multi-step conversation for building OR editing a CV using a single, unified state.
     """
-    state = session.session_data if session.session_data else {}
-    resume_data = session.resume_data if session.resume_data else {}
+    # Use session.resume_data as the single source of truth for this feature's memory.
+    if session.resume_data is None:
+        session.resume_data = {}
+    
+    state = session.resume_data
 
-    # --- THE FIX: A robust logical order that prioritizes ongoing conversations ---
+    # --- PRIORITY 1: Handle an ongoing conversation first ---
 
-    # --- PRIORITY 1: Handle an ONGOING "Create New CV" flow ---
-    if "resume_step" in state:
-        step = state.get("resume_step", 1)
+    # Is the bot in the middle of CREATING a new CV?
+    if "step" in state and not state.get("is_complete"):
+        current_step = state.get("step", 1)
         
-        # Save the answer from the previous step (if there was one)
-        if step > 1:
-            prev_step_key = CV_QUESTIONS[step - 1]["key"]
-            resume_data[prev_step_key] = message
-            session.resume_data = resume_data # Persist change
-
+        # Save the answer from the previous step
+        if current_step > 1:
+            prev_step_key = CV_QUESTIONS[current_step - 1]["key"]
+            if message.lower().strip() != 'skip':
+                state[prev_step_key] = message
+        
         # Check if we have asked all questions
-        if step > len(CV_QUESTIONS):
-            state.pop("resume_step", None) # End the creation flow
+        if current_step > len(CV_QUESTIONS):
+            state.pop("step") # End the creation flow
+            state["is_complete"] = True # Mark the CV as complete
             final_message = "Your CV is complete!"
-            cv_text = format_cv(resume_data)
-            user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+            cv_text = format_cv(state)
+            user_name_part = state.get("full_name", "user").split(" ")[0]
             filename = f"KaziLeo_CV_{user_name_part}.txt"
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
         # Ask the current question
-        question_info = CV_QUESTIONS[step]
-        state["resume_step"] = step + 1
+        question_info = CV_QUESTIONS[current_step]
+        state["step"] = current_step + 1
         return question_info["prompt"], None, False
 
-    # --- PRIORITY 2: Handle an ONGOING "Edit CV" flow ---
-    elif state.get("awaiting_cv_update_for"):
-        section_key = state.pop("awaiting_cv_update_for")
+    # Is the bot in the middle of EDITING an existing CV?
+    elif "editing_section_key" in state:
+        section_key = state.pop("editing_section_key")
         
         if section_key == "profile":
             parts = [p.strip() for p in message.split(',')]
-            resume_data["email"] = parts[0] if len(parts) > 0 else ""
-            resume_data["phone"] = parts[1] if len(parts) > 1 else ""
-            resume_data["links"] = parts[2] if len(parts) > 2 else ""
+            state["email"] = parts[0] if len(parts) > 0 else ""
+            state["phone"] = parts[1] if len(parts) > 1 else ""
+            state["links"] = parts[2] if len(parts) > 2 else ""
         else:
-            resume_data[section_key] = message
+            state[section_key] = message
         
-        session.resume_data = resume_data
-        state["awaiting_edit_another_section"] = True
-        editing_section = state.get('editing_section')
-        section_name = CV_EDITOR_MAP[editing_section]['name'] if editing_section in CV_EDITOR_MAP else "Section"
+        state["awaiting_edit_another"] = True
+        section_name = state.get("editing_section_name", "Section")
         return f"✅ Perfect, I've updated your *{section_name}*.\n\nWould you like to edit another section? (yes/no)", None, False
 
-    elif state.get("awaiting_editor_choice"):
+    elif "awaiting_editor_choice" in state:
         if message in CV_EDITOR_MAP:
-            state.pop("awaiting_editor_choice", None)
+            state.pop("awaiting_editor_choice")
             section_info = CV_EDITOR_MAP[message]
-            state["editing_section"] = message
-            state["awaiting_cv_update_for"] = section_info["key"]
+            state["editing_section_key"] = section_info["key"]
+            state["editing_section_name"] = section_info["name"]
             
             current_data = ""
             if section_info["key"] == "profile":
-                current_data = f"{resume_data.get('email', '')}, {resume_data.get('phone', '')}, {resume_data.get('links', '')}"
+                current_data = f"{state.get('email', '')}, {state.get('phone', '')}, {state.get('links', '')}"
                 prompt = "Please provide the new Email, Phone Number, and Links, separated by commas."
             else:
-                current_data = resume_data.get(section_info['key'], 'No data saved yet.')
+                current_data = state.get(section_info['key'], 'No data saved yet.')
                 prompt = f"Please provide the new content for your *{section_info['name']}*."
             return f"Okay, here's what I currently have for *{section_info['name']}*:\n_{current_data}_\n\n{prompt}", None, False
         else:
             return "Please select a valid number from the menu (1-5).", None, False
 
-    elif state.get("awaiting_edit_another_section"):
-        state.pop("awaiting_edit_another_section", None)
+    elif "awaiting_edit_another" in state:
+        state.pop("awaiting_edit_another")
         if "yes" in message.lower():
             state["awaiting_editor_choice"] = True
             return get_editor_menu(), None, False
         else:
             final_message = "Great! Your CV has been updated."
-            cv_text = format_cv(resume_data)
-            user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+            cv_text = format_cv(state)
+            user_name_part = state.get("full_name", "user").split(" ")[0]
             filename = f"KaziLeo_CV_{user_name_part}.txt"
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
-    # --- PRIORITY 3: Handle the initial entry point (if NO conversation is active) ---
+    # --- PRIORITY 2: Handle the initial entry point (if NO conversation is active) ---
     else:
-        if has_existing_cv(resume_data):
-            if not state.get("awaiting_edit_choice"):
+        if has_existing_cv(state):
+            if "awaiting_edit_choice" not in state:
                 state["awaiting_edit_choice"] = True
                 return "It looks like you already have a CV with me. Would you like to edit it? (yes/no)", None, False
             else:
-                state.pop("awaiting_edit_choice", None)
+                state.pop("awaiting_edit_choice")
                 if "yes" in message.lower():
                     state["awaiting_editor_choice"] = True
                     return get_editor_menu(), None, False
                 else: # User wants to create a new one, erasing the old one
-                    session.resume_data = {}; state.clear()
-                    state["resume_step"] = 1
+                    session.resume_data = {"step": 1} # Start the creation flow
                     return CV_QUESTIONS[1]["prompt"], None, False
         else: # No CV exists, so we must start the creation flow
-            state["resume_step"] = 1
+            session.resume_data = {"step": 1}
             return CV_QUESTIONS[1]["prompt"], None, False
 
