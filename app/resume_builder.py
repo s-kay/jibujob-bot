@@ -97,9 +97,9 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
         
-        # Save the answer from the previous step.
-        if message: # This ensures we don't try to save the initial empty message
-            step_to_save = current_step - 1
+        # Save the answer from the previous step. The 'message' is the answer to the (current_step - 1) question.
+        step_to_save = current_step - 1
+        if step_to_save > 0 and message: # This ensures we don't try to save the initial empty message
             if step_to_save in CV_QUESTIONS:
                 prev_step_key = CV_QUESTIONS[step_to_save]["key"]
                 if message.lower().strip() != 'skip':
