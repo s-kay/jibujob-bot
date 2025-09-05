@@ -92,17 +92,21 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     
     state = session.resume_data
 
-    # --- PRIORITY 1: Handle an ongoing conversation first ---
+    # --- THE FIX: A robust logical order that prioritizes ongoing conversations ---
 
-    # Is the bot in the middle of CREATING a new CV?
+    # --- PRIORITY 1: Handle an ONGOING "Create New CV" flow ---
     if "step" in state and not state.get("is_complete"):
         current_step = state.get("step", 1)
         
-        # Save the answer from the previous step
-        if current_step > 1:
-            prev_step_key = CV_QUESTIONS[current_step - 1]["key"]
-            if message.lower().strip() != 'skip':
-                state[prev_step_key] = message
+        # Save the answer from the previous step.
+        # THE FIX for the create loop is here: We process the message for the previous step.
+        # The step in the state always points to the NEXT question to be asked.
+        if message: # This ensures we don't try to save the initial empty message
+            prev_step_to_save = current_step - 1
+            if prev_step_to_save in CV_QUESTIONS:
+                prev_step_key = CV_QUESTIONS[prev_step_to_save]["key"]
+                if message.lower().strip() != 'skip':
+                    state[prev_step_key] = message
         
         # Check if we have asked all questions
         if current_step > len(CV_QUESTIONS):
@@ -120,7 +124,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         state["step"] = current_step + 1
         return question_info["prompt"], None, False
 
-    # Is the bot in the middle of EDITING an existing CV?
+    # --- PRIORITY 2: Handle an ONGOING "Edit CV" flow ---
     elif "editing_section_key" in state:
         section_key = state.pop("editing_section_key")
         
@@ -167,7 +171,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
-    # --- PRIORITY 2: Handle the initial entry point (if NO conversation is active) ---
+    # --- PRIORITY 3: Handle the initial entry point (if NO conversation is active) ---
     else:
         if has_existing_cv(state):
             if "awaiting_edit_choice" not in state:
