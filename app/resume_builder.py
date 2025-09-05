@@ -181,7 +181,10 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         if step > 1:
             prev_step_key = CV_QUESTIONS[step - 1]["key"]
             resume_data[prev_step_key] = message
-        
+
+        # Always save the updated resume_data back to the session!
+        session.resume_data = resume_data
+
         if step > len(CV_QUESTIONS):
             final_message = "Your CV is complete!"
             cv_text = format_cv(resume_data)
