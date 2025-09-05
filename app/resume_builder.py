@@ -190,7 +190,28 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                     session.resume_data = {}; state.clear()
                     state["resume_step"] = 1
                     return CV_QUESTIONS[1]["prompt"], None, False
-        else: # No CV exists, start creation flow
-            state["resume_step"] = 1
-            return CV_QUESTIONS[1]["prompt"], None, False
+
+    # --- Standard "Create New CV" Flow ---
+        else:
+            step = state.get("resume_step", 1)
+            if step > 1:
+                prev_step_key = CV_QUESTIONS[step - 1]["key"]
+                resume_data[prev_step_key] = message
+
+            # Always save the updated resume_data back to the session!
+            session.resume_data = resume_data
+            session.session_data = state
+
+            if step > len(CV_QUESTIONS):
+                final_message = "Your CV is complete!"
+                cv_text = format_cv(resume_data)
+                user_name_part = resume_data.get("full_name", "user").split(" ")[0]
+                filename = f"KaziLeo_CV_{user_name_part}.txt"
+                download_link = await upload_text_as_file(cv_text, filename)
+                return final_message, download_link, True
+
+            question_info = CV_QUESTIONS[step]
+            state["resume_step"] = step + 1
+            session.session_data = state
+            return question_info["prompt"], None, False
 
