@@ -266,8 +266,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
 
             session.current_menu = "main"
             if session.resume_data is not None:
-                session.resume_data.clear() # Clean up the state after completion
-            final_reply += f"\n\n{text_responses.get_main_menu()}"
+                final_reply += f"\n\n{text_responses.get_main_menu()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
         
         # If the conversation is not over, we just send the next question.
