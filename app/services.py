@@ -266,6 +266,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
 
             session.current_menu = "main"
             if session.resume_data is not None:
+                
                 final_reply += f"\n\n{text_responses.get_main_menu()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
         
