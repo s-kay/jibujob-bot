@@ -184,6 +184,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
 
         # Always save the updated resume_data back to the session!
         session.resume_data = resume_data
+        session.session_data = state
 
         if step > len(CV_QUESTIONS):
             final_message = "Your CV is complete!"
@@ -195,5 +196,6 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
 
         question_info = CV_QUESTIONS[step]
         state["resume_step"] = step + 1
+        session.session_data = state
         return question_info["prompt"], None, False
 
