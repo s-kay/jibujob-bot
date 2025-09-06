@@ -85,31 +85,29 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
-        # Save answer from previous step
-        # THE FIX IS HERE: Changed from `> 1` to `>= 1` to include the first answer.
-        if message and current_step >= 1:
-            step_to_save = current_step
-            if step_to_save in CV_QUESTIONS:
-                prev_step_key = CV_QUESTIONS[step_to_save]["key"]
-                if message.lower().strip() != 'skip':
-                    state[prev_step_key] = message
+
+        # ✅ Save the answer for the previous step (fixes loop bug)
+        step_to_save = current_step - 1
+        if step_to_save in CV_QUESTIONS:
+            prev_step_key = CV_QUESTIONS[step_to_save]["key"]
+            if message.lower().strip() != "skip":
+                state[prev_step_key] = message
 
         # Check if done
-        if current_step >= len(CV_QUESTIONS):
+        if current_step > len(CV_QUESTIONS):
             state.pop("creation_step", None)
             state["is_complete"] = True
-            session.resume_data = state
-            final_message = "Your CV is complete!"
+            session.resume_data = state  # persist state
+            final_message = "✅ Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
             filename = f"KaziLeo_CV_{user_name_part}.txt"
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
-        
+
         # Ask next question
-        next_step = current_step + 1
-        question_info = CV_QUESTIONS[next_step]
-        state["creation_step"] = next_step
+        question_info = CV_QUESTIONS[current_step]
+        state["creation_step"] = current_step + 1
         session.resume_data = state
         return question_info["prompt"], None, False
 
@@ -121,7 +119,6 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 section_info = CV_EDITOR_MAP[message]
                 state["awaiting_section_update"] = section_info["key"]
                 state["editing_section_name"] = section_info["name"]
-                current_data = ""
                 if section_info["key"] == "profile":
                     current_data = f"{state.get('email', '')}, {state.get('phone', '')}, {state.get('links', '')}"
                     prompt = "Please provide the new Email, Phone Number, and Links, separated by commas."
@@ -143,12 +140,14 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             else:
                 state[section_key] = message
             state["editing_step"] = "awaiting_continue_choice"
+            session.resume_data = state
             return f"✅ Perfect, I've updated your *{section_name}*.\n\nWould you like to edit another section? (yes/no)", None, False
 
         elif state["editing_step"] == "awaiting_continue_choice":
             state.pop("editing_step")
             if "yes" in message.lower():
                 state["editing_step"] = "awaiting_section_choice"
+                session.resume_data = state
                 return get_editor_menu(), None, False
             else:
                 final_message = "Great! Your CV has been updated."
@@ -167,17 +166,19 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 return "It looks like you already have a CV with me. Would you like to edit it? (yes/no)", None, False
             else:
                 state.pop("awaiting_edit_choice")
-                session.resume_data = state
                 if "yes" in message.lower():
                     state["editing_step"] = "awaiting_section_choice"
                     session.resume_data = state
                     return get_editor_menu(), None, False
                 else:
-                    session.resume_data = {"creation_step": 1}
-                    return CV_QUESTIONS[1]["prompt"], None, False
+                    # ✅ User said "no" → just return saved CV (no restart)
+                    cv_text = format_cv(state)
+                    user_name_part = state.get("full_name", "user").split(" ")[0]
+                    filename = f"KaziLeo_CV_{user_name_part}.txt"
+                    download_link = await upload_text_as_file(cv_text, filename)
+                    return "Here’s your current CV 👇🏾", download_link, True
         else:
             session.resume_data = {"creation_step": 1}
             return CV_QUESTIONS[1]["prompt"], None, False
 
     return "Sorry, something went wrong in the CV builder. Let's return to the main menu.", None, True
-
