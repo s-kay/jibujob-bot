@@ -97,13 +97,13 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
-
-        # ✅ Only save if not the very first step
-        if current_step > 1:
-            step_to_save = current_step - 1
+        # Save answer from previous step
+        # THE FIX IS HERE: Changed from `> 1` to `>= 1` to include the first answer.
+        if message and current_step >= 1:
+            step_to_save = current_step
             if step_to_save in CV_QUESTIONS:
                 prev_step_key = CV_QUESTIONS[step_to_save]["key"]
-                if message.lower().strip() != "skip":
+                if message.lower().strip() != 'skip':
                     state[prev_step_key] = message
 
         # Check if done
