@@ -94,23 +94,22 @@ def has_existing_cv(resume_data: dict) -> bool:
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
     state = session.resume_data or {}
 
-        # --- Ongoing Creation ---
+    # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
-        # Save answer from previous step
-        # THE FIX IS HERE: Changed from `> 1` to `>= 1` to include the first answer.
-        if message and current_step >= 1:
-            step_to_save = current_step
-            if step_to_save in CV_QUESTIONS:
-                prev_step_key = CV_QUESTIONS[step_to_save]["key"]
-                if message.lower().strip() != 'skip':
-                    state[prev_step_key] = message
+        
+        # The message we just received is the answer to the *previous* question.
+        step_that_was_answered = current_step - 1
+        if message and step_that_was_answered in CV_QUESTIONS:
+            answer_key = CV_QUESTIONS[step_that_was_answered]["key"]
+            if message.lower().strip() != 'skip':
+                state[answer_key] = message
 
-        # Check if done
+        # Now, decide what to do next. Have we finished?
         if current_step > len(CV_QUESTIONS):
             state.pop("creation_step", None)
             state["is_complete"] = True
-            session.resume_data = state  # persist state
+            session.resume_data = state
             final_message = "✅ Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
@@ -118,7 +117,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
-        # Ask next question
+        # If not finished, ask the current question and update the state for the next turn.
         question_info = CV_QUESTIONS[current_step]
         state["creation_step"] = current_step + 1
         session.resume_data = state
