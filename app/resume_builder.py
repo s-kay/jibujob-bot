@@ -86,18 +86,19 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
         # Save answer from previous step
-        if message and current_step > 1:
-            step_to_save = current_step - 1
+        # THE FIX IS HERE: Changed from `> 1` to `>= 1` to include the first answer.
+        if message and current_step >= 1:
+            step_to_save = current_step
             if step_to_save in CV_QUESTIONS:
                 prev_step_key = CV_QUESTIONS[step_to_save]["key"]
                 if message.lower().strip() != 'skip':
                     state[prev_step_key] = message
 
         # Check if done
-        if current_step > len(CV_QUESTIONS):
+        if current_step >= len(CV_QUESTIONS):
             state.pop("creation_step", None)
             state["is_complete"] = True
-            session.resume_data = state  # <-- CRITICAL
+            session.resume_data = state
             final_message = "Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
@@ -106,9 +107,10 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             return final_message, download_link, True
         
         # Ask next question
-        question_info = CV_QUESTIONS[current_step]
-        state["creation_step"] = current_step + 1
-        session.resume_data = state  # <-- CRITICAL
+        next_step = current_step + 1
+        question_info = CV_QUESTIONS[next_step]
+        state["creation_step"] = next_step
+        session.resume_data = state
         return question_info["prompt"], None, False
 
     # --- Ongoing Editing ---
@@ -178,3 +180,4 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             return CV_QUESTIONS[1]["prompt"], None, False
 
     return "Sorry, something went wrong in the CV builder. Let's return to the main menu.", None, True
+
