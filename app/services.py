@@ -248,6 +248,9 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
     elif message_text == "5" or session.current_menu == "resume_builder":
+        # ✅ Lock the user into resume builder flow until it's complete
+        session.current_menu = "resume_builder"
+        
         # Hand off to the CV builder flow
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(
             session, message_text_original
