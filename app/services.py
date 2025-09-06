@@ -249,6 +249,9 @@ async def process_message(db: Session, session: models.UserSession, message_text
     if session.current_menu == "resume_builder" or message_text == "5":
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
 
+        db.add(session)      # <-- ADD THIS
+        db.commit()          # <-- AND THIS
+
         if is_complete:
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
             if download_link:
@@ -259,8 +262,6 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 await whatsapp_client.send_whatsapp_message(session.phone_number, cv_text)
 
             session.current_menu = "main"
-            # THE FIX IS HERE: We no longer clear the resume_data so the user can edit it later.
-            # session.resume_data.clear() 
             final_reply += f"\n\n{text_responses.get_main_menu()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
         
