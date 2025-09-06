@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from . import models, whatsapp_client, job_client, training_client, entrepreneurship_client, mentorship_client, resume_builder, interview_simulator, cover_letter_generator, ai_client, skills_analyzer, feedback_handler, crud
 from . import text_responses
+from . import resume_builder
 
 async def process_message(db: Session, session: models.UserSession, message_text: str, is_new_user: bool):
     """
