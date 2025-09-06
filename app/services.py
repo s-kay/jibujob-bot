@@ -64,6 +64,12 @@ async def process_message(db: Session, session: models.UserSession, message_text
         elif "ushauri" in message_text: message_text = "3"
         elif "biashara" in message_text: message_text = "4"
 
+        if message_text == "1": session.current_menu = "jobs"
+        elif message_text == "2": session.current_menu = "training"
+        elif message_text == "3": session.current_menu = "mentorship"
+        elif message_text == "4": session.current_menu = "entrepreneurship"
+        elif message_text == "5": session.current_menu = "resume_builder"
+
         if session.current_menu != "main":
             message_text = "" # Clear message to signal start of a new flow
 
@@ -96,7 +102,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
     # --- Sequential Conversation Flow Handlers ---
-    if message_text == "1" or session.current_menu == "jobs":
+    if session.current_menu == "jobs":
         session.current_menu = "jobs"
         if state.get("awaiting_job_role"):
             if message_text.isdigit():
@@ -136,7 +142,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "2" or session.current_menu == "training":
+    elif session.current_menu == "training":
         session.current_menu = "training"
         if state.get("awaiting_training_role"):
             if message_text.isdigit():
@@ -173,7 +179,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "3" or session.current_menu == "mentorship":
+    elif session.current_menu == "mentorship":
         session.current_menu = "mentorship"
         if state.get("awaiting_mentorship_role"):
             if message_text.isdigit():
@@ -210,7 +216,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
-    elif message_text == "4" or session.current_menu == "entrepreneurship":
+    elif session.current_menu == "entrepreneurship":
         session.current_menu = "entrepreneurship"
         if state.get("awaiting_entrepreneurship_role"):
             if message_text.isdigit():
@@ -247,19 +253,17 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "5" or session.current_menu == "resume_builder":
+    elif session.current_menu == "resume_builder":
         # ✅ Lock the user into resume builder flow until it's complete
         session.current_menu = "resume_builder"
         
         # Hand off to the CV builder flow
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(
-            session, message_text_original
-        )
-
+            session, message_text_original)
+        
         # Persist updated session state
-        db.add(session)
-        db.commit()
-
+        crud.update_session(db, session)
+    
         if is_complete:
             # Send main confirmation message
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
@@ -291,7 +295,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
 
-    elif message_text == "6" or session.current_menu == "interview_practice":
+    elif session.current_menu == "interview_practice":
         if state.get("awaiting_interview_role_confirm"):
             if message_text in ["yes", "y"] and session.job_interest:
                 message_text = session.job_interest; reset_flags()
@@ -319,7 +323,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
             session.current_menu = "main"; await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_main_menu())
         return
 
-    elif message_text == "7" or session.current_menu == "cover_letter":
+    elif session.current_menu == "cover_letter":
         # THE FIX IS HERE: Rewritten with a stable, sequential logic pattern.
         # This is the entry point for the flow
         if (message_text == "7" and session.current_menu == "main") or (message_text == "" and session.current_menu == "cover_letter" and not state):
@@ -366,7 +370,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
         
-    elif message_text == "8" or session.current_menu == "cv_optimizer":
+    elif session.current_menu == "cv_optimizer":
         if state.get("awaiting_rewrite_confirm"):
             if message_text in ["yes", "y"]:
                 await whatsapp_client.send_whatsapp_message(session.phone_number, "Perfect! I'll get to work on rewriting those sections. This is an advanced AI task, so it might take up to a minute...")
@@ -402,7 +406,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "9" or session.current_menu == "skills_analyzer":
+    elif session.current_menu == "skills_analyzer":
         if state.get("awaiting_jd_for_analysis"):
             job_description = message_text_original
             await whatsapp_client.send_whatsapp_message(session.phone_number, "Analyzing your skills against the job description... This AI-powered step might take a moment.")
