@@ -192,7 +192,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                     download_link = await upload_text_as_file(cv_text, filename)
                     return "Here’s your current CV 👇🏾", download_link, True
         else:
-            session.resume_data = {"creation_step": 1}
+            session.resume_data = {"creation_step": 2}
             return CV_QUESTIONS[1]["prompt"], None, False
 
     return "Sorry, something went wrong in the CV builder. Let's return to the main menu.", None, True
