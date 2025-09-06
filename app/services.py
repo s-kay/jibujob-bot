@@ -246,15 +246,9 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif message_text == "5" or session.current_menu == "resume_builder":
-        # Entry point for the flow
-        if message_text == "" and not state and not (session.resume_data and session.resume_data.get('is_complete')):
-            # This is a fresh start, clear any old data
-            session.resume_data = {}
-
+    if session.current_menu == "resume_builder" or message_text == "5":
         reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
 
-        # If the handler says the conversation is over, we send the final messages.
         if is_complete:
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
             if download_link:
@@ -265,12 +259,11 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 await whatsapp_client.send_whatsapp_message(session.phone_number, cv_text)
 
             session.current_menu = "main"
-            if session.resume_data is not None:
-                
-                final_reply += f"\n\n{text_responses.get_main_menu()}"
+            # THE FIX IS HERE: We no longer clear the resume_data so the user can edit it later.
+            # session.resume_data.clear() 
+            final_reply += f"\n\n{text_responses.get_main_menu()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
         
-        # If the conversation is not over, we just send the next question.
         else:
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
