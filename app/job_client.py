@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO)
 # --- Smarter Keyword Mapping ---
 # This dictionary helps the bot understand related terms.
 INTEREST_KEYWORDS = {
-    "it": ["it", "software", "developer", "tech", "engineer", "soc", "support", "ai engineer", "automation", "ict", "software development"],
+    "it": ["it", "software", "developer", "tech", "engineer", "soc", "support", "ai engineer", "automation", "ict", "software development","systems administrator","network","fullstack","frontend","backend","devops"],
     "sales": ["sales", "business development", "retail", "agent", "marketing"],
     "admin": ["admin", "assistant", "clerical", "office support", "hr", "human resource", "people", "culture", "receptionist"],
     "accountant": ["accountant", "finance", "audit", "bookkeeping", "accounts"],
@@ -37,6 +37,8 @@ MOCK_JOBS_LIST = [
     "*Head of ICT, Data Systems and Digital Transformation* at International Livestock Research Institute (ILRI) - https://www.fuzu.com/job?filters[job_id]=743338&page=1",
     "*System Administrator* at Sipranda Capital Limited- https://www.fuzu.com/job?filters[job_id]=742815&page=1",
     "*DevOps Engineer* at Confidential Co.- https://www.linkedin.com/jobs/view/4293733758/?alternateChannel=search&eBP=NOT_ELIGIBLE_FOR_CHARGING&refId=5vJZIbb2tEMN1fbaNREN6A%3D%3D&trackingId=k1qFuRL2SSijvMSAfcB%2FbQ%3D%3D",
+    "*Systems Administrator* at Cognativ. - https://careers.cognativ.com/apply/148293bb-07c2-4a32-b997-68dcdfb3a24d",
+
 
     # Accountant
     "*Accountant* at Burhani Engineers Ltd - https://www.fuzu.com/kenya/jobs/accountant-burhani-engineers-ltd",
