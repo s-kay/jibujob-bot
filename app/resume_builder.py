@@ -75,23 +75,36 @@ def format_cv(cv_data: Optional[dict]) -> str:
     return cv.strip()
 
 def has_existing_cv(resume_data: dict) -> bool:
-    """A CV is considered 'existing' and 'complete' if the 'is_complete' flag is set and all main fields are present."""
-    required_fields = ["full_name", "email", "phone", "summary", "experience", "education", "skills"]
-    return bool(resume_data and resume_data.get("is_complete") and all(resume_data.get(f) for f in required_fields))
+    """
+    A CV is considered 'existing' and 'complete' if:
+    - The 'is_complete' flag is set
+    - Core required fields are filled
+    """
+    if not resume_data or not resume_data.get("is_complete"):
+        return False
+
+    # Core fields only (optional ones are ignored)
+    core_fields = ["full_name", "email", "phone", "summary", "experience", "education", "skills"]
+    for field in core_fields:
+        if not resume_data.get(field):
+            return False
+    return True
+
 
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
     state = session.resume_data or {}
 
-    # --- Ongoing Creation ---
+        # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
 
-        # ✅ Save the answer for the previous step (fixes loop bug)
-        step_to_save = current_step - 1
-        if step_to_save in CV_QUESTIONS:
-            prev_step_key = CV_QUESTIONS[step_to_save]["key"]
-            if message.lower().strip() != "skip":
-                state[prev_step_key] = message
+        # ✅ Only save if not the very first step
+        if current_step > 1:
+            step_to_save = current_step - 1
+            if step_to_save in CV_QUESTIONS:
+                prev_step_key = CV_QUESTIONS[step_to_save]["key"]
+                if message.lower().strip() != "skip":
+                    state[prev_step_key] = message
 
         # Check if done
         if current_step > len(CV_QUESTIONS):
@@ -110,6 +123,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
         state["creation_step"] = current_step + 1
         session.resume_data = state
         return question_info["prompt"], None, False
+
 
     # --- Ongoing Editing ---
     elif "editing_step" in state:
