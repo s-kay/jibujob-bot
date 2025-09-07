@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, JSON, DateTime, func, Text, ForeignKey
+from sqlalchemy import Integer, String, JSON, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from typing import Dict, Any, Optional, List
@@ -18,7 +18,7 @@ class UserSession(Base):
     mentorship_interest: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     entrepreneurship_interest: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
-    # --- Feature-Specific Data ---
+    # --- Feature Data ---
     resume_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     interview_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     cover_letter_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
@@ -30,9 +30,9 @@ class UserSession(Base):
     # --- Timestamps ---
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_active: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
     # --- Relationship to Feedback ---
-    feedbacks: Mapped[List["Feedback"]] = relationship(back_populates="user_session")
+    feedbacks: Mapped[List["Feedback"]] = relationship(back_populates="user")
 
 
 class Feedback(Base):
@@ -41,14 +41,25 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_phone_number: Mapped[str] = mapped_column(String, ForeignKey("user_sessions.phone_number"), index=True)
     
-    # THE FIX IS HERE: Column names now match the rest of the application
     likes: Mapped[Optional[str]] = mapped_column(String)
     dislikes: Mapped[Optional[str]] = mapped_column(String)
     suggestions: Mapped[Optional[str]] = mapped_column(String)
     rating: Mapped[Optional[int]] = mapped_column(Integer)
-    
-    
-    
-    # Relationship back to UserSession
-    user_session: Mapped["UserSession"] = relationship(back_populates="feedbacks")
+
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["UserSession"] = relationship(back_populates="feedbacks")
+
+# --- NEW TABLE FOR TVET EVENT ALERTS ---
+class Event(Base):
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    location: Mapped[str] = mapped_column(String, default="Online")
+    partner_name: Mapped[str] = mapped_column(String, nullable=False)
+    is_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
