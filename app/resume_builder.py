@@ -1,6 +1,6 @@
 # app/resume_builder.py
 from typing import Tuple, Optional
-from . import models
+from . import models, crud
 import asyncio
 from app.file_handler import upload_text_as_file
 
@@ -83,38 +83,39 @@ def has_existing_cv(resume_data: dict) -> bool:
     return bool(resume_data and resume_data.get("is_complete"))
 
 async def handle_resume_conversation(session: models.UserSession, message: str) -> tuple[str, str | None, bool]:
-    """
-    Manages the multi-step conversation for building OR editing a CV using a single, unified state.
-    """
     state = session.resume_data or {}
-    # --- PRIORITY 1: Handle an ONGOING conversation first ---
 
-    # Is the bot in the middle of CREATING a new CV?
+    # --- Ongoing Creation ---
     if "creation_step" in state:
         current_step = state.get("creation_step", 1)
         
-        # Save the answer from the previous step. The 'message' is the answer to the (current_step - 1) question.
-        step_to_save = current_step - 1
-        if step_to_save > 0 and message:
-            if step_to_save in CV_QUESTIONS:
-                prev_step_key = CV_QUESTIONS[step_to_save]["key"]
+        # Save answer for the question that was just asked
+        if message:
+            # current_step represents the question that was just asked
+            if current_step in CV_QUESTIONS:
+                step_key = CV_QUESTIONS[current_step]["key"]
                 if message.lower().strip() != 'skip':
-                    state[prev_step_key] = message
+                    state[step_key] = message
         
-        # Check if we have asked all questions
-        if current_step > len(CV_QUESTIONS):
-            state.pop("creation_step")
+        # Move to next step
+        next_step = current_step + 1
+
+        # Check if done
+        if next_step > len(CV_QUESTIONS):
+            state.pop("creation_step", None)
             state["is_complete"] = True
-            final_message = "Your CV is complete!"
+            session.resume_data = state
+            final_message = "✅ Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
             filename = f"KaziLeo_CV_{user_name_part}.txt"
             download_link = await upload_text_as_file(cv_text, filename)
             return final_message, download_link, True
 
-        # Ask the current question and set up for the next turn
-        question_info = CV_QUESTIONS[current_step]
-        state["creation_step"] = current_step + 1
+        # Ask next question
+        question_info = CV_QUESTIONS[next_step]
+        state["creation_step"] = next_step  # Store the question we're about to ask
+        session.resume_data = state
         return question_info["prompt"], None, False
 
     # Is the bot in the middle of EDITING an existing CV?
