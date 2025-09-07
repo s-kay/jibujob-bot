@@ -2,13 +2,14 @@ import httpx
 import logging
 import os
 from datetime import datetime
+import aiofiles
 
-# We'll use transfer.sh, a simple and free service for temporary file sharing.
-UPLOAD_URL = "https://transfer.sh/"
+# We are using a reliable, well-known service: 0x0.st
+UPLOAD_URL = "https://0x0.st"
 
 async def upload_text_as_file(content: str, desired_filename: str) -> str | None:
     """
-    Takes a string content, saves it to a temporary file, uploads it,
+    Takes a string content, saves it to a temporary file, uploads it to a hosting service,
     and returns a shareable download link.
 
     Args:
@@ -20,32 +21,33 @@ async def upload_text_as_file(content: str, desired_filename: str) -> str | None
     """
     # Create a unique temporary filename to avoid conflicts on the server
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_filename = f"temp_{timestamp}.txt"
+    temp_filename = f"temp_{timestamp}_{desired_filename}"
     
     try:
-        # 1. Create the temporary file on the server
-        with open(temp_filename, "w", encoding="utf-8") as f:
-            f.write(content)
+        # 1. Asynchronously create the temporary file on the server
+        async with aiofiles.open(temp_filename, "w", encoding="utf-8") as f:
+            await f.write(content)
         logging.info(f"Successfully created temporary file: {temp_filename}")
 
-        # 2. Upload the file to the hosting service
+        # 2. Asynchronously upload the file to the new hosting service
         async with httpx.AsyncClient() as client:
-            with open(temp_filename, "rb") as f:
-                # The service uses the URL path as the desired filename
-                url = f"{UPLOAD_URL}{desired_filename}"
-                logging.info(f"Uploading to: {url}")
+            async with aiofiles.open(temp_filename, "rb") as f:
+                # THE FIX IS HERE: We read the content into a bytes object first.
+                # This resolves the type mismatch between aiofiles and httpx.
+                content_bytes = await f.read()
+                files = {'file': (desired_filename, content_bytes, 'text/plain')}
                 
-                response = await client.put(url, content=f)
+                logging.info(f"Uploading to: {UPLOAD_URL}")
+                response = await client.post(UPLOAD_URL, files=files, timeout=30.0)
                 
-                response.raise_for_status()  # This will raise an error for 4xx or 5xx status codes
+                response.raise_for_status()
                 
-                # The response body is the download link
                 download_link = response.text.strip()
                 logging.info(f"File uploaded successfully. Link: {download_link}")
                 return download_link
 
     except httpx.HTTPStatusError as e:
-        logging.error(f"HTTP error during file upload: {e.response.status_code} - {e.response.text}")
+        logging.error(f"HTTP error during file upload to {UPLOAD_URL}: {e.response.status_code} - {e.response.text}")
         return None
     except Exception as e:
         logging.error(f"An unexpected error occurred in file handler: {e}", exc_info=True)
@@ -55,3 +57,4 @@ async def upload_text_as_file(content: str, desired_filename: str) -> str | None
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
             logging.info(f"Successfully cleaned up temporary file: {temp_filename}")
+
