@@ -1,47 +1,86 @@
-# app/training_client.py
-import asyncio
-from typing import List, Optional
+import logging
 
-# --- High-Quality Mock Database of Real, Relevant Courses ---
-# This list is manually curated to provide real value to users in the pilot program.
-MOCK_TRAINING_LIST = [
-    # Digital Skills & Marketing
-    "*Fundamentals of Digital Marketing* by Google - Learn the basics of digital marketing with this free, certified course. https://skillshop.exceedlms.com/student/path/6943-fundamentals-of-digital-marketing",
-    "*Social Media Marketing Course* by HubSpot Academy - A free, comprehensive course on social media strategy. https://academy.hubspot.com/courses/social-media",
-    "*Introduction to Graphic Design* by Great Learning - A free beginner's course to learn the fundamentals of graphic design. https://www.mygreatlearning.com/academy/learn-for-free/courses/graphic-design-basics",
-    
-    # Ajira Digital (Official Kenyan Government Program)
-    "*Ajira Digital Training Program* - Get skills in content writing, transcription, and data entry for online work. https://ajiradigital.go.ke/#/training",
+# This is a more structured mock database that includes a "featured" flag.
+# This allows us to simulate a partnership with a TVET institution.
+MOCK_COURSES = {
+    "featured": [
+        {
+            "title": "Grade III Certificate in Plumbing",
+            "keywords": ["plumbing", "artisan", "technical", "craft"],
+            "link": "https://www.nita.go.ke/courses/plumbing.aspx", # Example link
+            "partner": "NITA"
+        },
+        {
+            "title": "Diploma in Electrical & Electronics Engineering (Power Option)",
+            "keywords": ["electrical", "electronics", "engineering", "power", "technician"],
+            "link": "https://www.kabete.ac.ke/electrical-electronics-engineering/", # Example link
+            "partner": "Kabete National Polytechnic"
+        },
+        {
+            "title": "Artisan Certificate in Catering & Hospitality",
+            "keywords": ["catering", "hospitality", "hotel", "chef", "food"],
+            "link": "https://www.ntti.ac.ke/hospitality/", # Example link
+            "partner": "Nairobi TTI"
+        }
+    ],
+    "standard": [
+        {
+            "title": "Google Digital Skills for Africa (Free)",
+            "keywords": ["digital marketing", "online", "google", "seo"],
+            "link": "https://skillshop.exceedlms.com/student/collection/1384851"
+        },
+        {
+            "title": "Introduction to Graphic Design (Free Course)",
+            "keywords": ["graphic design", "design", "creative", "photoshop"],
+            "link": "https://alison.com/course/graphic-design"
+        },
+        {
+            "title": "Social Media Marketing Certification (Free)",
+            "keywords": ["social media", "marketing", "facebook", "instagram"],
+            "link": "https://academy.hubspot.com/courses/social-media"
+        },
+        {
+            "title": "Public Speaking Fundamentals (Free Course)",
+            "keywords": ["public speaking", "communication", "soft skills"],
+            "link": "https://www.coursera.org/learn/public-speaking"
+        },
+        {
+            "title": "Financial Literacy & Personal Finance",
+            "keywords": ["finance", "budgeting", "pesa", "money"],
+            "link": "https://alison.com/tag/financial-literacy"
+        }
+    ]
+}
 
-    # Soft Skills
-    "*Introduction to Public Speaking* by University of Washington - A highly-rated free course on Coursera. https://www.coursera.org/learn/public-speaking",
-    "*Sales and Negotiations Skills* - A free short course on Alison.com covering key business skills. https://alison.com/course/sales-and-negotiations-skills",
-    
-    # Financial Literacy
-    "*Personal Finance & Credit* - A free introductory course on Alison.com. https://alison.com/course/an-introductory-course-on-personal-finance-and-credit",
-    "*Managing Your M-Pesa Business* - A practical guide on using M-Pesa for business (YouTube Series). https://www.youtube.com/watch?v=examplelink1",
-    
-    # Tech Skills
-    "*Introduction to Web Development* - A free course covering HTML, CSS, and JavaScript. https://www.freecodecamp.org/learn/responsive-web-design/",
-    "*Python for Everybody* by University of Michigan - A very popular free course for learning Python. https://www.coursera.org/specializations/python",
-]
-
-async def fetch_trainings(keyword: str) -> Optional[List[str]]:
+async def fetch_trainings(keyword: str) -> list[str] | None:
     """
-    Simulates fetching training courses based on a keyword search.
-    In the future, this could be an API call to a real course provider.
+    Searches the mock database for training courses based on a keyword.
+    It now prioritizes and formats "featured" partner courses.
     """
-    await asyncio.sleep(1) # Simulate network latency
+    if not keyword:
+        return None
+        
+    keyword_lower = keyword.lower()
+    found_courses = []
     
     try:
-        # A simple keyword search logic
-        keyword = keyword.lower()
-        results = [
-            course for course in MOCK_TRAINING_LIST 
-            if keyword in course.lower()
-        ]
-        return results if results else []
+        # 1. Search for and format featured courses
+        for course in MOCK_COURSES["featured"]:
+            if any(kw in keyword_lower for kw in course["keywords"]):
+                # Add a star and the partner name to highlight it
+                formatted_string = f"⭐ *{course['title']}* (Partner: {course['partner']})\n{course['link']}"
+                found_courses.append(formatted_string)
+
+        # 2. Search for and format standard courses
+        for course in MOCK_COURSES["standard"]:
+            if any(kw in keyword_lower for kw in course["keywords"]):
+                formatted_string = f"*{course['title']}*\n{course['link']}"
+                found_courses.append(formatted_string)
+                
+        logging.info(f"Found {len(found_courses)} courses for keyword: '{keyword}'")
+        return found_courses if found_courses else []
+
     except Exception as e:
-        print(f"Error fetching training data: {e}")
+        logging.error(f"Error fetching trainings: {e}", exc_info=True)
         return None
 
