@@ -1,43 +1,78 @@
-# app/entrepreneurship_client.py
-import asyncio
-from typing import List, Optional
+import logging
 
-# --- High-Quality Mock Database of Real, Relevant Entrepreneurship Guides ---
-# This list is manually curated to provide real value to users in the pilot program.
-MOCK_ENTREPRENEURSHIP_LIST = [
-    # General Business & Registration
-    "*How to Register a Business Name in Kenya* via eCitizen (YouTube Guide) - A step-by-step video guide. (Business Registration) https://www.youtube.com/watch?v=RCE-x_R-92c",
-    "*Understanding the Youth Enterprise Development Fund* - Official site for government funding for youth businesses. (Funding) https://www.youthfund.go.ke/",
-    "*Writing a Simple Business Plan* (SME Toolkit Kenya) - A practical guide for creating a business plan. (Business Plan) http://kenya.smetoolkit.org/en/content/en/788/Writing-a-Business-Plan",
+# This is a more structured mock database that includes a "featured" flag.
+MOCK_GUIDES = {
+    "featured": [
+        {
+            "title": "Register Your Business Name in Kenya (eCitizen Guide)",
+            "keywords": ["register", "business", "legal", "ecitizen", "kenya"],
+            "link": "https://www.businessdailyafrica.com/bd/lifestyle/personal-finance/how-to-register-your-business-name-on-ecitizen-3333334", # Example link
+            "partner": "Government Services"
+        },
+        {
+            "title": "Accessing the Youth Enterprise Development Fund (YEDF)",
+            "keywords": ["funding", "loan", "grant", "youth fund", "yedf", "capital"],
+            "link": "https://www.youthfund.go.ke/en/loans", # Example link
+            "partner": "Government Funding"
+        }
+    ],
+    "standard": [
+        {
+            "title": "Beginner's Guide to Poultry Farming in Kenya",
+            "keywords": ["agribusiness", "poultry", "farming", "chicken", "kuku"],
+            "link": "https://www.farmers.co.ke/article/2001438286/a-beginner-s-guide-to-poultry-farming-in-kenya"
+        },
+        {
+            "title": "How to Start a Successful Salon or Kinyozi Business",
+            "keywords": ["salon", "barbershop", "kinyozi", "beauty", "hair"],
+            "link": "https://www.tuko.co.ke/business-ideas/447605-how-start-barbershop-kenya-2022-cost-profitability-more/"
+        },
+        {
+            "title": "Starting an E-commerce Business with a Small Budget",
+            "keywords": ["ecommerce", "online store", "selling online", "digital"],
+            "link": "https://www.youtube.com/watch?v=k-y-4-g-y-w" # Example YouTube link
+        },
+        {
+            "title": "Marketing Your 'Jua Kali' or Artisan Business on Social Media",
+            "keywords": ["jua kali", "artisan", "marketing", "social media", "crafts"],
+            "link": "https://www.yellow.co.ke/blog/posts/social-media-marketing-for-small-businesses-in-kenya"
+        },
+        {
+            "title": "A Guide to Starting a Catering Business",
+            "keywords": ["catering", "food", "hospitality", "events"],
+            "link": "https://www.standardmedia.co.ke/entertainment/lifestyle/article/2001423851/seven-steps-to-starting-a-successful-catering-business"
+        }
+    ]
+}
 
-    # Agribusiness
-    "*Getting Started with Poultry Farming in Kenya* (Farmers Trend) - A detailed guide for beginners. (Agribusiness/Poultry) https://farmerstrend.co.ke/poultry-farming-in-kenya-a-beginners-guide/",
-    "*Beginner's Guide to Greenhouse Farming in Kenya* - A practical overview of setting up a greenhouse. (Agribusiness/Farming) https://www.kenyans.co.ke/news/41320-beginners-guide-greenhouse-farming-kenya",
-
-    # E-commerce & Digital Services
-    "*How to Start an Online Business in Kenya* (Safaricom) - Tips on setting up your e-commerce presence. (E-commerce) https://www.safaricom.co.ke/business/sme/grow/how-to-start-an-online-business-in-kenya",
-    "*Guide to Freelancing on Upwork from Kenya* (YouTube) - A practical guide for starting a freelance career. (Freelancing/Digital) https://www.youtube.com/watch?v=example-freelance",
-    
-    # Crafts & Local Business
-    "*Turning a Craft Hobby into a Business* - Tips on pricing and selling handmade goods. (Crafts/Retail) https://www.artcaffemarket.co.ke/blogs/news/turning-your-hobby-into-a-business",
-    "*Running a Successful M-Pesa Shop* - A guide on the requirements and operations of an M-Pesa business. (Retail/Finance) https://www.tuko.co.ke/business-ideas/447771-how-start-mpesa-shop-business-kenya-requirements-cost-profit-2022/",
-]
-
-async def fetch_entrepreneurship_guides(keyword: str) -> Optional[List[str]]:
+async def fetch_entrepreneurship_guides(keyword: str) -> list[str] | None:
     """
-    Simulates fetching entrepreneurship guides based on a keyword search.
+    Searches the mock database for entrepreneurship guides based on a keyword.
+    It now prioritizes and formats "featured" partner resources.
     """
-    await asyncio.sleep(1) # Simulate network latency
+    if not keyword:
+        return None
+        
+    keyword_lower = keyword.lower()
+    found_guides = []
     
     try:
-        # A simple keyword search logic
-        keyword = keyword.lower()
-        results = [
-            guide for guide in MOCK_ENTREPRENEURSHIP_LIST 
-            if keyword in guide.lower()
-        ]
-        return results if results else []
+        # 1. Search for and format featured resources
+        for guide in MOCK_GUIDES["featured"]:
+            if any(kw in keyword_lower for kw in guide["keywords"]):
+                formatted_string = f"⭐ *{guide['title']}* (Partner: {guide['partner']})\n{guide['link']}"
+                found_guides.append(formatted_string)
+
+        # 2. Search for and format standard resources
+        for guide in MOCK_GUIDES["standard"]:
+            if any(kw in keyword_lower for kw in guide["keywords"]):
+                formatted_string = f"*{guide['title']}*\n{guide['link']}"
+                found_guides.append(formatted_string)
+                
+        logging.info(f"Found {len(found_guides)} entrepreneurship guides for keyword: '{keyword}'")
+        return found_guides if found_guides else []
+
     except Exception as e:
-        print(f"Error fetching entrepreneurship data: {e}")
+        logging.error(f"Error fetching entrepreneurship guides: {e}", exc_info=True)
         return None
 
