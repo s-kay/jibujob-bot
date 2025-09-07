@@ -102,7 +102,49 @@ async def process_message(db: Session, session: models.UserSession, message_text
         return
 
     # --- Sequential Conversation Flow Handlers ---
-    if session.current_menu == "jobs":
+    
+    if session.current_menu == "resume_builder":
+        # ✅ Lock the user into resume builder flow until it's complete
+        session.current_menu = "resume_builder"
+        
+        # Hand off to the CV builder flow
+        reply, download_link, is_complete = await resume_builder.handle_resume_conversation(session, message_text_original)
+        
+        # Persist updated session state
+        crud.update_session(db, session)
+    
+        if is_complete:
+            # Send main confirmation message
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
+            # Attach CV (download link preferred, fallback to plain text)
+            if download_link:
+                final_reply = (
+                    f"Here is a link to your downloadable CV document:\n"
+                    f"{download_link}\n\n"
+                    "This link is private and will expire in 24 hours."
+                )
+            else:
+                final_reply = (
+                    "Sorry, I had a little trouble creating the downloadable file. "
+                    "I've sent you the plain text version for now."
+                )
+                cv_text = resume_builder.format_cv(session.resume_data or {})
+                await whatsapp_client.send_whatsapp_message(session.phone_number, cv_text)
+
+            # Reset menu back to main
+            session.current_menu = "main"
+            final_reply += f"\n\n{text_responses.get_main_menu()}"
+            await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
+
+        else:
+            # Still mid-conversation → just send the next question/prompt
+            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
+        return
+    
+
+    elif session.current_menu == "jobs":
         session.current_menu = "jobs"
         if state.get("awaiting_job_role"):
             if message_text.isdigit():
@@ -253,48 +295,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif session.current_menu == "resume_builder":
-        # ✅ Lock the user into resume builder flow until it's complete
-        session.current_menu = "resume_builder"
-        
-        # Hand off to the CV builder flow
-        reply, download_link, is_complete = await resume_builder.handle_resume_conversation(
-            session, message_text_original)
-        
-        # Persist updated session state
-        crud.update_session(db, session)
     
-        if is_complete:
-            # Send main confirmation message
-            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-
-            # Attach CV (download link preferred, fallback to plain text)
-            if download_link:
-                final_reply = (
-                    f"Here is a link to your downloadable CV document:\n"
-                    f"{download_link}\n\n"
-                    "This link is private and will expire in 24 hours."
-                )
-            else:
-                final_reply = (
-                    "Sorry, I had a little trouble creating the downloadable file. "
-                    "I've sent you the plain text version for now."
-                )
-                cv_text = resume_builder.format_cv(session.resume_data or {})
-                await whatsapp_client.send_whatsapp_message(session.phone_number, cv_text)
-
-            # Reset menu back to main
-            session.current_menu = "main"
-            final_reply += f"\n\n{text_responses.get_main_menu()}"
-            await whatsapp_client.send_whatsapp_message(session.phone_number, final_reply)
-
-        else:
-            # Still mid-conversation → just send the next question/prompt
-            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-
-        return
-
-
     elif session.current_menu == "interview_practice":
         if state.get("awaiting_interview_role_confirm"):
             if message_text in ["yes", "y"] and session.job_interest:
