@@ -1,10 +1,9 @@
 import logging
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Any
 
-# Import modules from our application structure
 from . import models, crud, services, whatsapp_client
 from .database import engine, get_db
 from .config import settings
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="KaziLeo WhatsApp Bot")
 
-# --- Pydantic Models for WhatsApp Webhook Validation ---
 class TextMessage(BaseModel):
     body: str
 
@@ -40,6 +38,7 @@ class Value(BaseModel):
     metadata: dict
     contacts: Optional[List[Contact]] = None
     messages: Optional[List[Message]] = None
+    statuses: Optional[List[Any]] = None # To handle status updates
 
 class Change(BaseModel):
     value: Value
@@ -53,12 +52,26 @@ class WebhookRequest(BaseModel):
     object: str
     entry: List[Entry]
 
-# --- API Endpoints ---
-@app.get("/", response_class=FileResponse)
+
+@app.get("/", response_class=FileResponse, include_in_schema=False)
 def read_root():
     return "index.html"
 
-@app.get("/webhook", tags=["Webhook"])
+@app.post("/webchat", tags=["Web Pilot"])
+async def handle_webchat(request: Request, db: Session = Depends(get_db)):
+    """Endpoint for the web pilot to send messages."""
+    data = await request.json()
+    user_input = data.get("message", "")
+    session_id = data.get("session_id", "web-default")
+    
+    session, is_new = crud.get_or_create_session(db, phone_number=session_id, user_name="Friend")
+    await services.process_message(db, session, user_input, is_new_user=is_new)
+    crud.update_session(db, session)
+    
+    replies = await whatsapp_client.get_mock_replies()
+    return {"replies": replies}
+
+@app.get("/webhook", tags=["WhatsApp"])
 async def verify_webhook(request: Request):
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")
@@ -71,37 +84,32 @@ async def verify_webhook(request: Request):
         logger.error("Webhook verification failed.")
         raise HTTPException(status_code=403, detail="Verification failed")
 
-@app.post("/webhook", tags=["Webhook"])
+@app.post("/webhook", tags=["WhatsApp"])
 async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db)):
     try:
+        if not request.entry or not request.entry[0].changes:
+            return Response(status_code=200)
+
         change = request.entry[0].changes[0]
         value = change.value
 
         if value.messages and value.contacts:
             message = value.messages[0]
             contact = value.contacts[0]
-            
+
+            if message.type != "text" or not message.text:
+                return Response(status_code=200)
+
             from_number = message.from_number
             user_name = contact.profile.name
-            message_text = message.text.body if message.text else ""
-
-            # Clear any old replies for this user
-            if from_number in whatsapp_client.WEB_REPLIES:
-                whatsapp_client.WEB_REPLIES.pop(from_number)
+            message_text = message.text.body
 
             session, is_new = crud.get_or_create_session(db, phone_number=from_number, user_name=user_name)
             await services.process_message(db, session, message_text, is_new_user=is_new)
             crud.update_session(db, session)
-
-            # --- THE FIX FOR THE WEB ---
-            # If this was a web user, retrieve and return the stored replies
-            if from_number.startswith("web-"):
-                replies = whatsapp_client.WEB_REPLIES.pop(from_number, [])
-                return JSONResponse(content={"replies": replies})
-
+        
     except Exception as e:
         logger.error(f"Error handling webhook: {e}", exc_info=True)
     
-    # For regular WhatsApp messages, just return OK
     return Response(status_code=200)
 
