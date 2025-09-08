@@ -2,9 +2,10 @@ import argparse
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import pytz # A robust library for handling timezones
 
 # Add the project root to the Python path to allow importing from 'app'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -23,16 +24,29 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
 
 def add_event(args):
-    """Adds a new event to the database."""
+    """Adds a new event to the database, converting the date to UTC."""
     db = SessionLocal()
     try:
-        # Parse the date string into a datetime object
-        event_date = datetime.fromisoformat(args.date)
+        # THE FIX IS HERE: We make the input date timezone-aware (EAT) and convert to UTC.
         
+        # 1. Define the East Africa Timezone
+        eat_timezone = pytz.timezone("Africa/Nairobi")
+        
+        # 2. Parse the naive datetime string from the user's input
+        naive_event_date = datetime.fromisoformat(args.date)
+        
+        # 3. Localize the naive datetime to EAT
+        aware_event_date_eat = eat_timezone.localize(naive_event_date)
+        
+        # 4. Convert the EAT datetime to UTC for storage
+        event_date_utc = aware_event_date_eat.astimezone(pytz.utc)
+
+        logging.info(f"Received date {args.date} (EAT), converting to {event_date_utc.isoformat()} (UTC) for storage.")
+
         new_event = Event(
             title=args.title,
             description=args.description,
-            event_date=event_date,
+            event_date=event_date_utc, # Save the UTC-aware datetime
             location=args.location,
             partner_name=args.partner
         )
@@ -55,11 +69,14 @@ def list_events(args):
             return
 
         print("\n--- Upcoming Events ---")
+        eat_timezone = pytz.timezone("Africa/Nairobi")
         for event in events:
+            # Convert stored UTC time back to EAT for display
+            display_time = event.event_date.astimezone(eat_timezone)
             print(f"  ID: {event.id}")
             print(f"  Title: {event.title}")
             print(f"  Partner: {event.partner_name}")
-            print(f"  Date: {event.event_date.strftime('%Y-%m-%d %H:%M')}")
+            print(f"  Date (EAT): {display_time.strftime('%Y-%m-%d %H:%M')}")
             print(f"  Location: {event.location}")
             print(f"  Description: {event.description}")
             print(f"  Alert Sent: {'Yes' if event.is_alert_sent else 'No'}")
@@ -93,7 +110,7 @@ def main():
     parser_add = subparsers.add_parser("add", help="Add a new event")
     parser_add.add_argument("--title", required=True, help="Title of the event")
     parser_add.add_argument("--description", required=True, help="A short description of the event")
-    parser_add.add_argument("--date", required=True, help="Event date and time in ISO format (YYYY-MM-DDTHH:MM:SS)")
+    parser_add.add_argument("--date", required=True, help="Event date and time in ISO format (YYYY-MM-DDTHH:MM:SS), assumed to be in EAT.")
     parser_add.add_argument("--location", default="Online", help="Location of the event (e.g., 'Nairobi TTI Campus')")
     parser_add.add_argument("--partner", required=True, help="Name of the TVET partner hosting the event")
     parser_add.set_defaults(func=add_event)
@@ -112,3 +129,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
