@@ -60,6 +60,8 @@ class Event(Base):
     event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     location: Mapped[str] = mapped_column(String, default="Online")
     partner_name: Mapped[str] = mapped_column(String, nullable=False)
+    heads_up_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
