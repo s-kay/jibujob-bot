@@ -45,33 +45,39 @@ async def send_event_alerts():
         phone_numbers = [user.phone_number for user in all_users]
         logging.info(f"Found {len(phone_numbers)} users to potentially notify.")
 
-        # --- THE FIX: A more robust way to calculate "tomorrow" ---
+        # Calculate tomorrow's date range in UTC
         now_utc = datetime.now(timezone.utc)
-        
-        # Calculate the start of tomorrow in UTC
         start_of_tomorrow = (now_utc + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Calculate the start of the day after tomorrow in UTC
         start_of_day_after_tomorrow = start_of_tomorrow + timedelta(days=1)
         
-        logging.info(f"Checking for events between {start_of_tomorrow.isoformat()} and {start_of_day_after_tomorrow.isoformat()}")
+        # Convert to naive datetimes for database comparison (since DB stores naive UTC)
+        start_of_tomorrow_naive = start_of_tomorrow.replace(tzinfo=None)
+        start_of_day_after_tomorrow_naive = start_of_day_after_tomorrow.replace(tzinfo=None)
+        
+        logging.info(f"Checking for events between {start_of_tomorrow_naive.isoformat()} and {start_of_day_after_tomorrow_naive.isoformat()} (UTC)")
 
-        # 3. Find events happening anytime tomorrow that have NOT had an alert sent yet
+        # Find events happening anytime tomorrow that have NOT had an alert sent yet
         events_to_notify = db.query(Event).filter(
             Event.is_alert_sent == False,
-            Event.event_date >= start_of_tomorrow,
-            Event.event_date < start_of_day_after_tomorrow
+            Event.event_date >= start_of_tomorrow_naive,
+            Event.event_date < start_of_day_after_tomorrow_naive
         ).all()
         
         if not events_to_notify:
             logging.info("No events scheduled for tomorrow that need alerts. Exiting.")
             return
 
-        # 4. For each event, format and send the alert to all users
+        # For each event, format and send the alert to all users
         for event in events_to_notify:
             logging.info(f"Found event for 'Reminder' alert: '{event.title}'")
-            # Convert event time to EAT for the message
-            event_time_eat = event.event_date.astimezone(timezone(timedelta(hours=3)))
+            
+            # THE FIX: Properly convert naive UTC datetime to EAT
+            if event.event_date.tzinfo is None:
+                event_time_utc = event.event_date.replace(tzinfo=timezone.utc)
+            else:
+                event_time_utc = event.event_date
+            
+            event_time_eat = event_time_utc.astimezone(timezone(timedelta(hours=3)))
             
             message = (
                 f"❗ Don't Forget! The *{event.title}* is tomorrow!\n\n"
@@ -85,7 +91,7 @@ async def send_event_alerts():
             for phone in phone_numbers:
                 await send_whatsapp_message(phone, message)
             
-            # 5. Mark the event as "sent" so we don't send this alert again
+            # Mark the event as "sent" so we don't send this alert again
             event.is_alert_sent = True
             db.add(event)
             db.commit()
