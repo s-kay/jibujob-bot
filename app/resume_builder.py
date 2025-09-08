@@ -2,7 +2,7 @@
 from typing import Tuple, Optional
 from . import models, crud
 import asyncio
-from app.file_handler import upload_text_as_file
+from app.file_handler import generate_and_upload_pdf
 
 # --- ATS-Friendly Questions ---
 CV_QUESTIONS = {
@@ -108,8 +108,8 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             final_message = "✅ Your CV is complete!"
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
-            filename = f"KaziLeo_CV_{user_name_part}.txt"
-            download_link = await upload_text_as_file(cv_text, filename)
+            filename = f"KaziLeo_CV_{user_name_part}.pdf"
+            download_link = await generate_and_upload_pdf(state, filename)
             return final_message, download_link, True
 
         # Ask next question
@@ -180,8 +180,8 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             final_message = "Great! Your CV has been updated."
             cv_text = format_cv(state)
             user_name_part = state.get("full_name", "user").split(" ")[0]
-            filename = f"KaziLeo_CV_{user_name_part}.txt"
-            download_link = await upload_text_as_file(cv_text, filename)
+            filename = f"KaziLeo_CV_{user_name_part}.pdf"
+            download_link = await generate_and_upload_pdf(state, filename)
             return final_message, download_link, True
 
     # --- PRIORITY 2: Handle the initial entry point (if NO conversation is active) ---
