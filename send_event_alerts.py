@@ -26,13 +26,12 @@ Base.metadata.create_all(bind=engine)
 async def send_event_alerts():
     """
     Checks for upcoming events and sends a 'Reminder' alert (1 day before) to all users.
-    This version uses a robust, calendar-day-based check.
     """
     logging.info("Starting event alert check...")
     db = SessionLocal()
     
     try:
-        # 1. Get all real user phone numbers
+        # 1. Get all real user phone numbers (excluding CLI and web testers)
         all_users = db.query(UserSession.phone_number).filter(
             UserSession.phone_number.notlike('cli_%'),
             UserSession.phone_number.notlike('web-%')
@@ -45,22 +44,17 @@ async def send_event_alerts():
         phone_numbers = [user.phone_number for user in all_users]
         logging.info(f"Found {len(phone_numbers)} users to potentially notify.")
 
-        # --- THE FIX: A more robust way to calculate "tomorrow" ---
+        # 2. Get the current time in UTC to match the database's timezone
         now_utc = datetime.now(timezone.utc)
         
-        # Calculate the start of tomorrow in UTC
-        start_of_tomorrow = (now_utc + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Calculate the start of the day after tomorrow in UTC
-        start_of_day_after_tomorrow = start_of_tomorrow + timedelta(days=1)
-        
-        logging.info(f"Checking for events between {start_of_tomorrow.isoformat()} and {start_of_day_after_tomorrow.isoformat()}")
+        # 3. Find events happening tomorrow that have NOT had an alert sent yet
+        one_day_from_now = now_utc + timedelta(days=1)
+        two_days_from_now = now_utc + timedelta(days=2)
 
-        # 3. Find events happening anytime tomorrow that have NOT had an alert sent yet
         events_to_notify = db.query(Event).filter(
             Event.is_alert_sent == False,
-            Event.event_date >= start_of_tomorrow,
-            Event.event_date < start_of_day_after_tomorrow
+            Event.event_date >= one_day_from_now,
+            Event.event_date < two_days_from_now
         ).all()
         
         if not events_to_notify:
@@ -70,13 +64,10 @@ async def send_event_alerts():
         # 4. For each event, format and send the alert to all users
         for event in events_to_notify:
             logging.info(f"Found event for 'Reminder' alert: '{event.title}'")
-            # Convert event time to EAT for the message
-            event_time_eat = event.event_date.astimezone(timezone(timedelta(hours=3)))
-            
             message = (
                 f"❗ Don't Forget! The *{event.title}* is tomorrow!\n\n"
                 f"Hosted by *{event.partner_name}*.\n"
-                f"🗓️ When: {event_time_eat.strftime('%A, %B %d at %I:%M %p EAT')}\n"
+                f"🗓️ When: {event.event_date.strftime('%A, %B %d at %I:%M %p EAT')}\n"
                 f"📍 Where: {event.location}\n\n"
                 f"Description: {event.description}\n\n"
                 f"This is a great opportunity. Hope to see you there!"
@@ -101,4 +92,3 @@ async def send_event_alerts():
 
 if __name__ == "__main__":
     asyncio.run(send_event_alerts())
-
