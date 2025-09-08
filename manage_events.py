@@ -68,8 +68,14 @@ def list_events(args):
 
         print("\n--- Upcoming Events ---")
         for event in events:
-            # THE FIX: Convert the stored UTC time back to EAT for display
-            display_time = event.event_date.astimezone(EAT_TZ)
+            # THE FIX: First make the naive datetime timezone-aware as UTC, then convert to EAT
+            if event.event_date.tzinfo is None:  # If it's naive
+                utc_aware_time = event.event_date.replace(tzinfo=UTC_TZ)
+            else:  # If it's already aware
+                utc_aware_time = event.event_date
+            
+            display_time = utc_aware_time.astimezone(EAT_TZ)
+            
             print(f"  ID: {event.id}")
             print(f"  Title: {event.title}")
             print(f"  Partner: {event.partner_name}")
