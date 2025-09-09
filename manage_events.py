@@ -2,9 +2,10 @@ import argparse
 import logging
 import os
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import pytz
 
 # Add the project root to the Python path to allow importing from 'app'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -20,24 +21,14 @@ engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
 
-# --- Timezone Definitions ---
-# THE FIX: We use Python's built-in timezone objects for consistency.
-UTC_TZ = timezone.utc
-EAT_TZ = timezone(timedelta(hours=3), 'EAT')
-
-
 def add_event(args):
     """Adds a new event to the database, converting the date to UTC."""
     db = SessionLocal()
     try:
-        # 1. Parse the naive datetime string from the user's input
+        eat_timezone = pytz.timezone("Africa/Nairobi")
         naive_event_date = datetime.fromisoformat(args.date)
-        
-        # 2. Assume the user's input is in EAT and make it timezone-aware
-        aware_event_date_eat = naive_event_date.replace(tzinfo=EAT_TZ)
-        
-        # 3. Convert the EAT datetime to UTC for storage
-        event_date_utc = aware_event_date_eat.astimezone(UTC_TZ)
+        aware_event_date_eat = eat_timezone.localize(naive_event_date)
+        event_date_utc = aware_event_date_eat.astimezone(pytz.utc)
 
         logging.info(f"Received date {args.date} (EAT), converting to {event_date_utc.isoformat()} (UTC) for storage.")
 
@@ -67,22 +58,18 @@ def list_events(args):
             return
 
         print("\n--- Upcoming Events ---")
+        eat_timezone = pytz.timezone("Africa/Nairobi")
         for event in events:
-            # THE FIX: First make the naive datetime timezone-aware as UTC, then convert to EAT
-            if event.event_date.tzinfo is None:  # If it's naive
-                utc_aware_time = event.event_date.replace(tzinfo=UTC_TZ)
-            else:  # If it's already aware
-                utc_aware_time = event.event_date
-            
-            display_time = utc_aware_time.astimezone(EAT_TZ)
-            
+            display_time = event.event_date.astimezone(eat_timezone)
             print(f"  ID: {event.id}")
             print(f"  Title: {event.title}")
             print(f"  Partner: {event.partner_name}")
             print(f"  Date (EAT): {display_time.strftime('%Y-%m-%d %H:%M')}")
             print(f"  Location: {event.location}")
             print(f"  Description: {event.description}")
-            print(f"  Alert Sent: {'Yes' if event.is_alert_sent else 'No'}")
+            # THE FIX IS HERE: Displaying the new, correct flags.
+            print(f"  Heads-Up Sent: {'Yes' if event.heads_up_sent else 'No'}")
+            print(f"  Reminder Sent: {'Yes' if event.reminder_sent else 'No'}")
             print("-" * 20)
     finally:
         db.close()
@@ -105,20 +92,25 @@ def delete_event(args):
         db.close()
 
 def main():
+    """Main function to parse command-line arguments."""
     parser = argparse.ArgumentParser(description="KaziLeo Event Management Tool")
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available commands")
+
     parser_add = subparsers.add_parser("add", help="Add a new event")
-    parser_add.add_argument("--title", required=True)
-    parser_add.add_argument("--description", required=True)
-    parser_add.add_argument("--date", required=True, help="Event date/time in ISO format (YYYY-MM-DDTHH:MM:SS), assumed EAT.")
-    parser_add.add_argument("--location", default="Online")
-    parser_add.add_argument("--partner", required=True)
+    parser_add.add_argument("--title", required=True, help="Title of the event")
+    parser_add.add_argument("--description", required=True, help="A short description of the event")
+    parser_add.add_argument("--date", required=True, help="Event date and time in ISO format (YYYY-MM-DDTHH:MM:SS), assumed to be in EAT.")
+    parser_add.add_argument("--location", default="Online", help="Location of the event (e.g., 'Nairobi TTI Campus')")
+    parser_add.add_argument("--partner", required=True, help="Name of the TVET partner hosting the event")
     parser_add.set_defaults(func=add_event)
+
     parser_list = subparsers.add_parser("list", help="List all upcoming events")
     parser_list.set_defaults(func=list_events)
-    parser_delete = subparsers.add_parser("delete", help="Delete an event by ID")
-    parser_delete.add_argument("--id", type=int, required=True)
+
+    parser_delete = subparsers.add_parser("delete", help="Delete an event by its ID")
+    parser_delete.add_argument("--id", type=int, required=True, help="The ID of the event to delete")
     parser_delete.set_defaults(func=delete_event)
+
     args = parser.parse_args()
     args.func(args)
 
