@@ -77,13 +77,15 @@ async def fetch_jobs(keyword: str) -> list[str] | None:
         # 1. Search for and format featured jobs
         for job in MOCK_JOBS["featured"]:
             if any(kw in keyword_lower for kw in job["keywords"]):
-                formatted_string = f"⭐ *{job['title']}* (Partner: {job['partner']})\n{job['link']}"
+                # THE FIX IS HERE: Replaced the newline character with a hyphen.
+                formatted_string = f"⭐ *{job['title']}* (Partner: {job['partner']}) - {job['link']}"
                 found_jobs.append(formatted_string)
 
         # 2. Search for and format standard jobs
         for job in MOCK_JOBS["standard"]:
             if any(kw in keyword_lower for kw in job["keywords"]):
-                formatted_string = f"*{job['title']}*\n{job['link']}"
+                # THE FIX IS HERE: Replaced the newline character with a hyphen.
+                formatted_string = f"*{job['title']}* - {job['link']}"
                 found_jobs.append(formatted_string)
                 
         logging.info(f"Found {len(found_jobs)} jobs for keyword: '{keyword}'")
