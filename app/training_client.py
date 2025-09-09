@@ -45,6 +45,11 @@ MOCK_COURSES = {
             "link": "https://www.coursera.org/learn/public-speaking"
         },
         {
+            "title": "Communication and Negotiation Skills (Free Course)",
+            "keywords": ["communication", "negotiation", "soft skills"],
+            "link": "https://alison.com/tag/communication-skills"
+        },
+        {
             "title": "Financial Literacy & Personal Finance",
             "keywords": ["finance", "budgeting", "pesa", "money"],
             "link": "https://alison.com/tag/financial-literacy"
