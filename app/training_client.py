@@ -26,7 +26,7 @@ MOCK_COURSES = {
     "standard": [
         {
             "title": "Google Digital Skills for Africa (Free)",
-            "keywords": ["digital marketing", "online", "google", "seo"],
+            "keywords": ["digital marketing", "online", "google", "seo", "Digital skills"],
             "link": "https://skillshop.exceedlms.com/student/collection/1384851"
         },
         {
