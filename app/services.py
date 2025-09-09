@@ -184,7 +184,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif session.current_menu == "training":
+    elif session.current_menu == "training" or session.current_menu == "2":
         session.current_menu = "training"
         if state.get("awaiting_training_role"):
             if message_text.isdigit():
