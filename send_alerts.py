@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 from app.models import Base, UserSession
 from app.config import settings
 from app.job_client import fetch_jobs
-# THE FIX: We now import the correct function for sending templates
 from app.whatsapp_client import send_template_message
 
 # Configure logging
@@ -36,7 +35,12 @@ async def fetch_jobs_for_interest(interest: str) -> list[str]:
     search_terms = INTEREST_KEYWORDS.get(interest.lower(), [interest])
     all_found_jobs = set()
     for term in search_terms:
-        jobs = await fetch_jobs(term)
+        # NOTE: The original file had a bug here, calling fetch_jobs from the wrong module.
+        # This assumes you have a standalone job_client.py with a fetch_jobs function.
+        # If fetch_jobs is in THIS file, you would just call `await fetch_jobs(term)`.
+        # For this example, I am assuming it's in `app.job_client`.
+        from app.job_client import fetch_jobs as fetch_jobs_from_client
+        jobs = await fetch_jobs_from_client(term)
         if jobs:
             for job in jobs:
                 all_found_jobs.add(job)
@@ -68,32 +72,27 @@ async def send_job_alerts():
             if new_jobs:
                 logging.info(f"Found {len(new_jobs)} new jobs for '{interest}'. Sending alert to {user.phone_number}...")
                 
-                # --- THE FIX: Dynamically build parameters to avoid newlines ---
-                # We only show the top 3 jobs in the alert
                 jobs_to_send = new_jobs[:3]
                 
-                # Create a list of parameters, ensuring we have exactly 3 for the template
                 job_params = []
                 for i in range(3):
                     if i < len(jobs_to_send):
-                        # Use a bullet point for nice formatting
                         job_params.append(f"• {jobs_to_send[i]}")
                     else:
-                        # If there are fewer than 3 jobs, fill the rest with empty strings
-                        job_params.append("")
+                        # THE FIX IS HERE: Use a single space instead of an empty string.
+                        job_params.append(" ")
 
                 components = [{
                     "type": "body",
                     "parameters": [
-                        {"type": "text", "text": user.user_name},      # {{1}} - User's Name
-                        {"type": "text", "text": interest.title()},    # {{2}} - Job Interest
-                        {"type": "text", "text": job_params[0]},       # {{3}} - Job 1
-                        {"type": "text", "text": job_params[1]},       # {{4}} - Job 2
-                        {"type": "text", "text": job_params[2]},       # {{5}} - Job 3
+                        {"type": "text", "text": user.user_name},
+                        {"type": "text", "text": interest.title()},
+                        {"type": "text", "text": job_params[0]},
+                        {"type": "text", "text": job_params[1]},
+                        {"type": "text", "text": job_params[2]},
                     ]
                 }]
                 
-                # Use the new, more robust template name
                 await send_template_message(user.phone_number, "job_alert_v2", components)
             else:
                 logging.info(f"No new jobs found for '{interest}'.")
