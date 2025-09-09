@@ -56,7 +56,6 @@ async def send_job_alerts():
 
         logging.info(f"Found {len(users_with_interest)} users with job interests.")
 
-        # We process each user individually now to send personalized greetings
         for user in users_with_interest:
             if not user.job_interest or not user.user_name:
                 continue
@@ -69,20 +68,33 @@ async def send_job_alerts():
             if new_jobs:
                 logging.info(f"Found {len(new_jobs)} new jobs for '{interest}'. Sending alert to {user.phone_number}...")
                 
-                # We only show the top 3 jobs in the alert to keep it concise
-                job_list_str = "\n".join(new_jobs[:3])
+                # --- THE FIX: Dynamically build parameters to avoid newlines ---
+                # We only show the top 3 jobs in the alert
+                jobs_to_send = new_jobs[:3]
                 
-                # --- THE FIX: We now prepare and send the approved template ---
+                # Create a list of parameters, ensuring we have exactly 3 for the template
+                job_params = []
+                for i in range(3):
+                    if i < len(jobs_to_send):
+                        # Use a bullet point for nice formatting
+                        job_params.append(f"• {jobs_to_send[i]}")
+                    else:
+                        # If there are fewer than 3 jobs, fill the rest with empty strings
+                        job_params.append("")
+
                 components = [{
                     "type": "body",
                     "parameters": [
                         {"type": "text", "text": user.user_name},      # {{1}} - User's Name
                         {"type": "text", "text": interest.title()},    # {{2}} - Job Interest
-                        {"type": "text", "text": job_list_str},        # {{3}} - The list of jobs
+                        {"type": "text", "text": job_params[0]},       # {{3}} - Job 1
+                        {"type": "text", "text": job_params[1]},       # {{4}} - Job 2
+                        {"type": "text", "text": job_params[2]},       # {{5}} - Job 3
                     ]
                 }]
                 
-                await send_template_message(user.phone_number, "job_alert_v1", components)
+                # Use the new, more robust template name
+                await send_template_message(user.phone_number, "job_alert_v2", components)
             else:
                 logging.info(f"No new jobs found for '{interest}'.")
 
