@@ -28,6 +28,11 @@ MOCK_GUIDES = {
             "link": "https://www.tuko.co.ke/business-ideas/447605-how-start-barbershop-kenya-2022-cost-profitability-more/"
         },
         {
+            "title": "How to Start a Plumbing Business in Kenya: A Step-by-Step Guide.",
+            "keywords": ["plumbing", "plumber", "plumbing business", "water"],
+            "link": "https://pesabook.com/how-to-start-a-plumbing-business-in-kenya-a-step-by-step-guide/"
+        },
+        {
             "title": "Starting an E-commerce Business with a Small Budget",
             "keywords": ["ecommerce", "online store", "selling online", "digital"],
             "link": "https://www.youtube.com/watch?v=k-y-4-g-y-w" # Example YouTube link
