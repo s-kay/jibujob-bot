@@ -69,6 +69,11 @@ async def process_message(db: Session, session: models.UserSession, message_text
         elif message_text == "3": session.current_menu = "mentorship"
         elif message_text == "4": session.current_menu = "entrepreneurship"
         elif message_text == "5": session.current_menu = "resume_builder"
+        elif message_text == "6": session.current_menu = "interview_practice"
+        elif message_text == "7": session.current_menu = "cover_letter"
+        elif message_text == "8": session.current_menu = "cv_optimizer"
+        elif message_text == "9": session.current_menu = "skills_analyzer"
+
 
         if session.current_menu != "main":
             message_text = "" # Clear message to signal start of a new flow
@@ -184,7 +189,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
-    elif session.current_menu == "training" or session.current_menu == "2":
+    elif session.current_menu == "training":
         session.current_menu = "training"
         if state.get("awaiting_training_role"):
             if message_text.isdigit():
