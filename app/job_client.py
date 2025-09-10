@@ -30,9 +30,39 @@ MOCK_JOBS = {
             "link": "https://www.fuzu.com/kenya/jobs/electrical-technician-kenya-2"
         },
         {
+            "title": "Web Developer",
+            "keywords": ["web developer", "web development", "web", "developer", "development"],
+            "link": "https://www.myjobmag.co.ke/job/web-developer-team-lead-agency-yellow-pages-kenya-1"
+        },
+        {
             "title": "Building and Construction Mason",
             "keywords": ["construction", "mason", "building", "artisan"],
             "link": "https://www.brightermonday.co.ke/listings/construction-foreman-q2v7jp"
+        },
+        {
+            "title": "Network Administrator",
+            "keywords": ["network", "administrator", "IT", "infrastructure", "networking", "systems", "network admin", "network administrator", "it"],
+            "link": "https://www.myjobmag.co.ke/job/network-administrator-safaricom-kenya-5"
+        },
+        {
+            "title": "Accountant",
+            "keywords": ["accountant", "finance", "accounts", "accounting"],
+            "link": "https://www.myjobmag.co.ke/job/accountant-groots-kenya"
+        },
+        {
+            "title": "Sales Representative",
+            "keywords": ["sales", "representative", "marketing", "business development"],
+            "link": "https://www.brightermonday.co.ke/listings/sales-representative-gwnd84"
+        },
+        {
+            "title": "Interior Design Specialist",
+            "keywords": ["interior design", "design", "architecture", "space planning"],
+            "link": "https://www.myjobmag.co.ke/job/interior-design-specialist-prestige-bluestar-holdings-ltd"
+        },
+        {
+            "title": "Senior Android Developer",
+            "keywords": ["android", "developer", "mobile", "app", "development", "android developer"],
+            "link": "https://www.myjobmag.co.ke/job/senior-android-developer-equity-bank-kenya-3"
         },
         {
             "title": "Welding and Fabrication Technician",
@@ -56,7 +86,7 @@ MOCK_JOBS = {
         },
         {
             "title": "Junior Accountant",
-            "keywords": ["accountant", "finance", "accounts"],
+            "keywords": ["accountant", "finance", "accounts", "accounting"],
             "link": "https://www.brightermonday.co.ke/listings/junior-accountant-w7q4mp", 
         }
     ]
