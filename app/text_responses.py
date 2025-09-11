@@ -16,7 +16,7 @@ def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional
             f"Sasa {user_name}! It's great to meet you. My name is Riziki, ",
             f"Karibu {user_name}! I'm Riziki, ",
         ]
-        introduction = "I'm here to help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara)."
+        introduction = "I'm your free AI companion, here to help you find jobs (kazi), learn new skills (mafunzo), connect with mentors (ushauri), or explore business ideas (biashara).\n\n" f"By using KaziLeo, you agree to our Privacy Policy: {PRIVACY_POLICY_URL}"
         return (random.choice(greetings), introduction)
     else:
         greetings = [
