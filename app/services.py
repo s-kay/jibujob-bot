@@ -41,7 +41,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
     
     # --- On-Demand Data Privacy Policy ---
     if message_text in ["privacy", "sera"]:
-        reply = f"Of course! You can view our full Privacy Policy here:\n{text_responses.PRIVACY_POLICY_URL}"
+        reply = f"Here is our full Privacy Policy:\n{text_responses.PRIVACY_POLICY_URL}"
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
 
