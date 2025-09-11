@@ -62,3 +62,14 @@ class Event(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+
+# --- NEW TABLE FOR THE PARTNER DASHBOARD ---
+class Partner(Base):
+    __tablename__ = "partners"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    partner_name: Mapped[str] = mapped_column(String, nullable=False) # e.g., "Kabete National Polytechnic"
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)    
+
