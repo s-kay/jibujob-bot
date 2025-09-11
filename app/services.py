@@ -38,7 +38,14 @@ async def process_message(db: Session, session: models.UserSession, message_text
         reply = "👋🏾 Your session has been reset. Type 'hi' to start again with a fresh menu."
         await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         return
-        
+    
+    # --- On-Demand Data Privacy Policy ---
+    if message_text in ["privacy", "sera"]:
+        reply = f"Of course! You can view our full Privacy Policy here:\n{text_responses.PRIVACY_POLICY_URL}"
+        await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+        return
+
+
     # --- Feedback Flow ---
     if message_text in ["feedback", "maoni"] or session.current_menu == "feedback":
         if message_text in ["feedback", "maoni"] and session.current_menu != "feedback":
