@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
+from fastapi.staticfiles import StaticFiles
 
 from . import models, crud, services, whatsapp_client
 from .database import engine, get_db
@@ -53,6 +54,10 @@ class Entry(BaseModel):
 class WebhookRequest(BaseModel):
     object: str
     entry: List[Entry]
+
+# ---serve static files from the "static" directory ---
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 app.include_router(dashboard_router.router)
 
