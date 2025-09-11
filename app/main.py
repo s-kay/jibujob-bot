@@ -8,7 +8,9 @@ from . import models, crud, services, whatsapp_client
 from .database import engine, get_db
 from .config import settings
 from pydantic import BaseModel, Field
+from . import dashboard_router
 
+# Create all database tables on startup
 models.Base.metadata.create_all(bind=engine)
 
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +54,7 @@ class WebhookRequest(BaseModel):
     object: str
     entry: List[Entry]
 
+app.include_router(dashboard_router.router)
 
 @app.get("/", response_class=FileResponse, include_in_schema=False)
 def read_root():
@@ -68,7 +71,7 @@ async def handle_webchat(request: Request, db: Session = Depends(get_db)):
     await services.process_message(db, session, user_input, is_new_user=is_new)
     crud.update_session(db, session)
     
-    replies = await whatsapp_client.get_mock_replies()
+    replies = whatsapp_client.get_mock_replies()
     return {"replies": replies}
 
 @app.get("/webhook", tags=["WhatsApp"])
