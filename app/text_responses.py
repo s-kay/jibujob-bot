@@ -2,6 +2,9 @@
 import random
 from typing import List, Optional, Tuple
 
+#  privacy policy URL 
+PRIVACY_POLICY_URL = "https://gist.github.com/s-kay/1b779e2db46be1521dbb34251dd2fdf2/raw/74d52102aaf9528cf21176c1e2a5f2f4fecf0955/kazileo_privacy_policy.md"
+
 def get_greeting_parts(user_name: str, is_new_user: bool) -> Tuple[str, Optional[str]]:
     """
     Selects a random, friendly greeting based on whether the user is new or returning.
