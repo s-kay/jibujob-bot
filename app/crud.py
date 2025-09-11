@@ -73,3 +73,8 @@ def save_feedback(db: Session, user_phone_number: str, feedback_data: dict):
     db.commit()
     logging.info(f"Feedback saved for user {user_phone_number}")
 
+# --- NEW FUNCTION FOR PARTNER AUTHENTICATION ---
+def get_partner_by_username(db: Session, username: str) -> models.Partner | None:
+    """Fetches a partner from the database by their username."""
+    return db.query(models.Partner).filter(models.Partner.username == username).first()    
+
