@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaziLeo Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Sun Orange: #FFA500, Plant Green: #4CAF50 */
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <svg class="h-10 w-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="48" fill="#4CAF50" stroke="#FFA500" stroke-width="4"/>
+                    <circle cx="50" cy="50" r="35" fill="#4CAF50" stroke="#FFA500" stroke-width="4"/>
+                    <circle cx="50" cy="50" r="22" fill="#FFA500"/>
+                </svg>
+                <h1 class="text-2xl font-bold text-gray-800">KaziLeo Partner Dashboard</h1>
+            </div>
+            <a href="/dashboard/logout" class="text-sm font-medium text-gray-600 hover:text-orange-600">Logout</a>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Event Management Section -->
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Manage Events</h2>
+                    <form id="add-event-form" class="space-y-4">
+                        <div>
+                            <label for="event-title" class="block text-sm font-medium text-gray-700">Event Title</label>
+                            <input type="text" id="event-title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="event-date" class="block text-sm font-medium text-gray-700">Event Date & Time</label>
+                            <input type="datetime-local" id="event-date" name="date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="event-location" class="block text-sm font-medium text-gray-700">Location</label>
+                            <input type="text" id="event-location" name="location" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="event-description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea id="event-description" name="description" rows="3" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-[#4CAF50] hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300">Add Event</button>
+                    </form>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-medium text-gray-800">Your Events</h3>
+                        <ul id="event-list" class="mt-2 space-y-2">
+                            <!-- Events will be dynamically inserted here by JavaScript -->
+                            <li class="p-3 bg-gray-100 rounded-md flex justify-between items-center">
+                                <span>Sample Event: Career Fair (2025-10-15)</span>
+                                <button class="text-red-500 hover:text-red-700 font-semibold">Delete</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Featured Job Management Section -->
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Manage Featured Jobs</h2>
+                    <form id="add-job-form" class="space-y-4">
+                        <div>
+                            <label for="job-title" class="block text-sm font-medium text-gray-700">Job Title</label>
+                            <input type="text" id="job-title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label for="job-keywords" class="block text-sm font-medium text-gray-700">Keywords (comma-separated)</label>
+                            <input type="text" id="job-keywords" name="keywords" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500" placeholder="e.g., plumbing, artisan, technical">
+                        </div>
+                        <div>
+                            <label for="job-link" class="block text-sm font-medium text-gray-700">Application Link</label>
+                            <input type="url" id="job-link" name="link" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        <button type="submit" class="w-full bg-[#4CAF50] hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300">Add Featured Job</button>
+                    </form>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-medium text-gray-800">Your Featured Jobs</h3>
+                        <ul id="job-list" class="mt-2 space-y-2">
+                            <!-- Jobs will be dynamically inserted here -->
+                             <li class="p-3 bg-gray-100 rounded-md flex justify-between items-center">
+                                <span>Sample Job: Certified Plumber</span>
+                                <button class="text-red-500 hover:text-red-700 font-semibold">Delete</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Basic placeholder script for interactivity.
+        // This will be powered by our FastAPI backend.
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('partner_token');
+            if (!token) {
+                // In a real app, you'd redirect. For now, we just log.
+                console.log("No auth token found. User should be redirected to login.");
+            }
+
+            // TODO: Fetch existing events and jobs and populate the lists
+            // Example: fetch('/dashboard/api/events', { headers: {'Authorization': `Bearer ${token}`}}) ...
+
+            document.getElementById('add-event-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Placeholder: This would add a new event.');
+                // Example: fetch('/dashboard/api/events', { method: 'POST', body: new FormData(e.target), ... })
+            });
+
+            document.getElementById('add-job-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Placeholder: This would add a new featured job.');
+                 // Example: fetch('/dashboard/api/jobs', { method: 'POST', body: new FormData(e.target), ... })
+            });
+        });
+    </script>
+</body>
+</html>
