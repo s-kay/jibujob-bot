@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session, attributes
 from app import models
 from app.config import settings
+from typing import List, Dict, Any
 
 def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tuple[models.UserSession, bool]:
     """
@@ -78,3 +79,59 @@ def get_partner_by_username(db: Session, username: str) -> models.Partner | None
     """Fetches a partner from the database by their username."""
     return db.query(models.Partner).filter(models.Partner.username == username).first()    
 
+# --- CRUD FUNCTIONS FOR THE DASHBOARD ---
+
+def get_events_by_partner(db: Session, partner_id: int) -> List[models.Event]:
+    """Fetches all events for a specific partner."""
+    return db.query(models.Event).filter(models.Event.partner_id == partner_id).order_by(models.Event.event_date.desc()).all()
+
+def create_event(db: Session, event_data: Dict[str, Any], partner: models.Partner) -> models.Event:
+    """Creates a new event for a partner."""
+    new_event = models.Event(
+        title=event_data["title"],
+        description=event_data["description"],
+        event_date=datetime.fromisoformat(event_data["date"]),
+        location=event_data["location"],
+        partner_name=partner.partner_name,
+        partner_id=partner.id
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    return new_event
+
+def delete_event(db: Session, event_id: int, partner_id: int) -> bool:
+    """Deletes an event, ensuring it belongs to the correct partner."""
+    event_to_delete = db.query(models.Event).filter(models.Event.id == event_id, models.Event.partner_id == partner_id).first()
+    if event_to_delete:
+        db.delete(event_to_delete)
+        db.commit()
+        return True
+    return False
+
+def get_featured_jobs_by_partner(db: Session, partner_id: int) -> List[models.FeaturedJob]:
+    """Fetches all featured jobs for a specific partner."""
+    return db.query(models.FeaturedJob).filter(models.FeaturedJob.partner_id == partner_id).order_by(models.FeaturedJob.created_at.desc()).all()
+
+def create_featured_job(db: Session, job_data: Dict[str, Any], partner: models.Partner) -> models.FeaturedJob:
+    """Creates a new featured job for a partner."""
+    new_job = models.FeaturedJob(
+        title=job_data["title"],
+        keywords=job_data["keywords"],
+        link=job_data["link"],
+        partner_name=partner.partner_name,
+        partner_id=partner.id
+    )
+    db.add(new_job)
+    db.commit()
+    db.refresh(new_job)
+    return new_job
+
+def delete_featured_job(db: Session, job_id: int, partner_id: int) -> bool:
+    """Deletes a featured job, ensuring it belongs to the correct partner."""
+    job_to_delete = db.query(models.FeaturedJob).filter(models.FeaturedJob.id == job_id, models.FeaturedJob.partner_id == partner_id).first()
+    if job_to_delete:
+        db.delete(job_to_delete)
+        db.commit()
+        return True
+    return False
