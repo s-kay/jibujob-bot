@@ -46,7 +46,8 @@ async def login_for_access_token(request: Request, username: str = Form(...), pa
     partner = crud.get_partner_by_username(db, username=username)
     if not partner or not auth.verify_password(password, partner.hashed_password):
         # pass an error message back to the login page
-        return templates.TemplateResponse("login.html", {"request": {}, "error": "Incorrect username or password"})
+        error_message = "Incorrect username or password. Please try again."
+        return templates.TemplateResponse("login.html", {"request": request, "error": error_message})
     
     access_token = auth.create_access_token(data={"sub": partner.username})
     response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
