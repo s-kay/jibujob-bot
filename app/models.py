@@ -45,6 +45,19 @@ class Feedback(Base):
 
     user: Mapped["UserSession"] = relationship(back_populates="feedbacks")
 
+class Partner(Base):
+    __tablename__ = "partners"
+    # ... (existing Partner model remains the same, but we add relationships) ...
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    partner_name: Mapped[str] = mapped_column(String)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # --- NEW RELATIONSHIPS ---
+    events: Mapped[List["Event"]] = relationship(back_populates="partner")
+    featured_jobs: Mapped[List["FeaturedJob"]] = relationship(back_populates="partner")
+
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -56,20 +69,27 @@ class Event(Base):
     location: Mapped[str] = mapped_column(String, default="Online")
     partner_name: Mapped[str] = mapped_column(String)
     
-    # THE FIX IS HERE: The old `is_alert_sent` column has been removed.
+    #...`is_alert_sent` column has been removed.
     heads_up_sent: Mapped[bool] = mapped_column(Boolean, default=False)
     reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # --- NEW FOREIGN KEY ---
+    partner_id: Mapped[int] = mapped_column(Integer, ForeignKey("partners.id"))
+    partner: Mapped["Partner"] = relationship(back_populates="events")
+
 
 # --- NEW TABLE FOR THE PARTNER DASHBOARD ---
-class Partner(Base):
-    __tablename__ = "partners"
-
+class FeaturedJob(Base):
+    __tablename__ = "featured_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    partner_name: Mapped[str] = mapped_column(String, nullable=False) # e.g., "Kabete National Polytechnic"
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)    
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    keywords: Mapped[str] = mapped_column(String) # Stored as a comma-separated string
+    link: Mapped[str] = mapped_column(String, nullable=False)
+    partner_name: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    partner_id: Mapped[int] = mapped_column(Integer, ForeignKey("partners.id"))
+    partner: Mapped["Partner"] = relationship(back_populates="featured_jobs")
+
 
