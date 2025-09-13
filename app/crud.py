@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session, attributes
+from sqlalchemy import inspect
 from app import models
 from app.config import settings
 from typing import List, Dict, Any
@@ -47,13 +48,22 @@ def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tup
 
 def update_session(db: Session, session: models.UserSession):
     """
-    Flags the session data as modified before committing.
-    This is crucial for making sure changes to JSON fields are saved.
+    Flags mutable fields as modified before committing.
+    This version is more robust and checks if attributes are present.
     """
-    attributes.flag_modified(session, "session_data")
-    attributes.flag_modified(session, "resume_data")
-    attributes.flag_modified(session, "interview_data")
-    attributes.flag_modified(session, "cover_letter_data")
+    # Use SQLAlchemy's inspect utility to get the object's state
+    ins = inspect(session)
+    
+    # THE FIX IS HERE: We only flag attributes that are actually loaded in the session's state.
+    if 'session_data' in ins.attrs and session.session_data is not None:
+        attributes.flag_modified(session, "session_data")
+    if 'resume_data' in ins.attrs and session.resume_data is not None:
+        attributes.flag_modified(session, "resume_data")
+    if 'interview_data' in ins.attrs and session.interview_data is not None:
+        attributes.flag_modified(session, "interview_data")
+    if 'cover_letter_data' in ins.attrs and session.cover_letter_data is not None:
+        attributes.flag_modified(session, "cover_letter_data")
+    
     db.commit()
 
 def save_feedback(db: Session, user_phone_number: str, feedback_data: dict):
