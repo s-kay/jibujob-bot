@@ -88,28 +88,17 @@ async def rewrite_cv_sections(cv_text: str, job_description: str, feedback: str)
 async def generate_cover_letter(cv_data: str, company: str, role: str, job_description: str) -> str | None:
     """Uses a generative AI to create a tailored cover letter."""
     system_prompt = (
-        "You are an expert career coach named KaziLeo. Your task is to write a professional, concise, and impactful cover letter for a user applying for a job." 
-        
+        "You are KaziLeo, an expert Kenyan career coach and CV writer. Your tone is professional, encouraging, and helpful. "
+        "Your task is to write a concise, professional, and ATS-friendly cover letter. "
+        "The cover letter must be under 3000 characters. "
+        "CRITICAL INSTRUCTION: First, you MUST extract the user's Full Name, Email, and Phone Number from the provided CV text. "
+        "Then, use these exact details to create the header of the cover letter. Do NOT use placeholders like '[Your Name]'."
     )
-    user_prompt = f"""
-    **User's CV:**
-    ---
-    {cv_data}
-    ---
 
-    **Job Details:**
-    - Company: {company}
-    - Role: {role}
-    - Job Description: {job_description}
-
-    **Instructions:**
-    1.  Start with a professional greeting addressing the hiring manager (or "Hiring Team" if no name is available).
-    2.  In the first paragraph, clearly state the position being applied for and where it was seen (if applicable, otherwise omit).
-    3.  In the body paragraphs, highlight 2-3 key skills or experiences from the user's CV that directly match the requirements in the job description. Use strong action verbs and quantify achievements.
-    4.  Keep the tone professional but enthusiastic.
-    5.  End with a strong closing statement expressing excitement for the opportunity and a call to action.
-    6.  Use a professional sign-off with the user's full name from their CV.
-    7.  The cover letter should be a maximum of 3 paragraphs and under 3000 characters and directly address how the candidate's experience and skills from the CV match the requirements of the job description.
-    8.  Do include placeholders like "[Your Contact Info]".
-    """
+    user_prompt = (
+        f"Here is the user's CV:\n---CV START---\n{cv_data}\n---CV END---\n\n"
+        f"Here is the job description for the '{role}' position at '{company}':\n---JD START---\n{job_description}\n---JD END---\n\n"
+        "Please write a compelling cover letter based on this information. Ensure it highlights the user's most relevant skills and experience from their CV that match the job description."
+    )
+    
     return await get_ai_response(system_prompt, user_prompt)
