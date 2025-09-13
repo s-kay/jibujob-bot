@@ -244,7 +244,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
         else: # Start of flow
             clear_temp_state()
             if not resume_builder.has_existing_cv(session.resume_data or {}):
-                reply = "It's best to build a CV first so I have your details. Just ask `build a CV`"
+                reply = "It's best to build a CV first so I have your details. Just type `CV`"
                 session.current_menu = "main"
             else:
                 session.cover_letter_data = {}
