@@ -3,6 +3,7 @@ from typing import Tuple, Optional
 from . import models, crud
 import asyncio
 from app.file_handler import generate_and_upload_pdf
+from . import text_responses
 
 # --- ATS-Friendly Questions ---
 CV_QUESTIONS = {
@@ -24,23 +25,16 @@ CV_QUESTIONS = {
 
 # This dictionary maps the user's choice in the editor to the key in the resume data.
 CV_EDITOR_MAP = {
-    "1": {"key": "summary", "name": "Professional Summary"},
-    "2": {"key": "experience", "name": "Work Experience"},
-    "3": {"key": "education", "name": "Education"},
-    "4": {"key": "skills", "name": "Skills"},
-    "5": {"key": "profile", "name": "Profile Info"}, # Special case
+    "summary": {"key": "summary", "name": "Summary"},
+    "experience": {"key": "experience", "name": "Work Experience"},
+    "education": {"key": "education", "name": "Education"},
+    "skills": {"key": "skills", "name": "Skills"},
+    "profile": {"key": "profile", "name": "Profile Info"}, # Special case
+    "certifications": {"key": "certifications", "name": "Certifications"},
+    "projects": {"key": "projects", "name": "Projects"},
+    "referees": {"key": "referees", "name": "Referees"}
 }
 
-def get_editor_menu():
-    """Returns the formatted CV editor sub-menu."""
-    return (
-        "Great! Which part of your CV would you like to update?\n\n"
-        "1. Professional Summary\n"
-        "2. Work Experience\n"
-        "3. Education\n"
-        "4. Skills\n"
-        "5. Profile Info (Phone/Email/links)"
-    )
 
 def format_cv(cv_data: Optional[dict]) -> str:
     if not cv_data: return "*No CV data provided.*"
@@ -49,8 +43,14 @@ def format_cv(cv_data: Optional[dict]) -> str:
     phone = cv_data.get('phone', 'N/A')
     links = cv_data.get('links', 'N/A')
     profile_line = f"{email} | {phone} | {links}"
+
+    # Center the header using spaces (approximate centering for WhatsApp/text)
+    header_width = 50  # Adjust based on your display needs
+    name_spaces = ' ' * max(0, (header_width - len(name)) // 2)
+    profile_spaces = ' ' * max(0, (header_width - len(profile_line)) // 2)
+
     cv = f"""
-*--- YOUR ATS-FRIENDLY CV ---*
+
 
 *{name}*
 {profile_line}
@@ -136,7 +136,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                     prompt = f"Please provide the new content for your *{section_info['name']}*."
                 return f"Okay, here's what I currently have for *{section_info['name']}*:\n_{current_data}_\n\n{prompt}", None, False
             else:
-                return "Please select a valid number from the menu (1-5).", None, False
+                return text_responses.get_cv_editor_responses("start_editing_new"), None, False
 
     elif state.get("awaiting_section_update"):
         section_key = state.pop("awaiting_section_update")
@@ -169,13 +169,13 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 prompt = f"Please provide the new content for your *{section_info['name']}*."
             return f"Okay, here's what I currently have for *{section_info['name']}*:\n_{current_data}_\n\n{prompt}", None, False
         else:
-            return "Please select a valid number from the menu (1-5).", None, False
+            return text_responses.get_cv_editor_responses("start_editing_new"), None, False
 
     elif state.get("awaiting_continue_choice"):
         state.pop("awaiting_continue_choice")
         if "yes" in message.lower():
             state["awaiting_section_choice"] = True
-            return get_editor_menu(), None, False
+            return text_responses.get_cv_editor_responses("start_editing_new"), None, False
         else:
             final_message = "Great! Your CV has been updated."
             cv_text = format_cv(state)
@@ -194,7 +194,7 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
                 state.pop("awaiting_edit_choice")
                 if "yes" in message.lower():
                     state["editing_step"] = "awaiting_section_choice"
-                    return get_editor_menu(), None, False
+                    return text_responses.get_cv_editor_responses("start_editing_new"), None, False
                 else: # User wants to create a new one, erasing the old one
                     session.resume_data = {"creation_step": 1} 
                     return CV_QUESTIONS[1]["prompt"], None, False
@@ -203,4 +203,3 @@ async def handle_resume_conversation(session: models.UserSession, message: str) 
             return CV_QUESTIONS[1]["prompt"], None, False
 
     return "Sorry, something went wrong in the CV builder. Let's return to the main menu.", None, True
-
