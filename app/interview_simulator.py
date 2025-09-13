@@ -68,6 +68,11 @@ def handle_interview_conversation(session: models.UserSession, message_text: str
     interview_data = session.interview_data
     state = session.session_data
 
+    # Ensure interview_data is a dictionary
+    if interview_data is None:
+        interview_data = {}
+        session.interview_data = interview_data
+
     # --- Start of the flow: Get the job role ---
     if not interview_data.get("questions"):
         role = message_text
