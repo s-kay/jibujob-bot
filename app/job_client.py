@@ -183,6 +183,21 @@ MOCK_JOBS = {
             "title": "Clinical Nurse",
             "keywords": ["nursing", "healthcare", "clinical", "nurse"],
             "link": "https://aku.taleo.net/careersection/ex/jobdetail.ftl?job=250002KU&lang=en"
+        },
+        {
+            "title": "L1 IT Desktop Support ",
+            "keywords": ["Desktop", "support", "it"],
+            "link": "https://applybpo.com/view-job-posting/10669"
+        },
+        {
+            "title": "Project Manager",
+            "keywords": ["project management", "project", "manager"],
+            "link": "https://bfaglobal.com/careers/project-manager-bfa-global/"
+        },
+        {
+            "title": "Programme Officer",
+            "keywords": ["programme management", "project", "officer"],
+            "link": "https://www.web.civicus.org/Programme-Officer"
         }
 
         ]
