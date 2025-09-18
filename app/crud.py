@@ -127,6 +127,7 @@ def create_featured_job(db: Session, job_data: Dict[str, Any], partner: models.P
     """Creates a new featured job for a partner."""
     new_job = models.FeaturedJob(
         title=job_data["title"],
+        description=job_data["description"],
         keywords=job_data["keywords"],
         link=job_data["link"],
         partner_name=partner.partner_name,
