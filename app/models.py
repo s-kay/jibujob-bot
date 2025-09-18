@@ -55,8 +55,8 @@ class Partner(Base):
     role: Mapped[str] = mapped_column(String, default="employer")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # --- NEW RELATIONSHIPS ---
-    events: Mapped[List["Event"]] = relationship(back_populates="partner")
-    featured_jobs: Mapped[List["FeaturedJob"]] = relationship(back_populates="partner")
+    events: Mapped[List["Event"]] = relationship("Event", back_populates="partner", cascade="all, delete-orphan")
+    featured_jobs: Mapped[List["FeaturedJob"]] = relationship("FeaturedJob", back_populates="partner", cascade="all, delete-orphan")
 
 
 
@@ -76,9 +76,12 @@ class Event(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    is_cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
+    cancellation_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # --- NEW FOREIGN KEY ---
     partner_id: Mapped[int] = mapped_column(Integer, ForeignKey("partners.id"))
-    partner: Mapped["Partner"] = relationship(back_populates="events")
+    partner: Mapped["Partner"] = relationship("Partner", back_populates="events")
 
 
 # --- NEW TABLE FOR THE PARTNER DASHBOARD ---
@@ -92,6 +95,6 @@ class FeaturedJob(Base):
     partner_name: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     partner_id: Mapped[int] = mapped_column(Integer, ForeignKey("partners.id"))
-    partner: Mapped["Partner"] = relationship(back_populates="featured_jobs")
+    partner: Mapped["Partner"] = relationship("Partner", back_populates="featured_jobs")
 
 
