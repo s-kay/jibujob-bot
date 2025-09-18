@@ -146,25 +146,6 @@
             }
         }
 
-        document.getElementById('add-event-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            
-            try {
-                const response = await fetch('/dashboard/api/events', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error('Failed to add event');
-                
-                showToast('Event added successfully!');
-                form.reset();
-                // For a full SPA experience, we'd dynamically add the new event to the list.
-                // For an MVP, a page reload is simpler.
-                setTimeout(() => location.reload(), 1000); 
-            } catch (error) {
-                showToast('Error: Could not add event.', 'error');
-            }
-        });
-
         document.getElementById('add-job-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
@@ -172,14 +153,36 @@
 
             try {
                 const response = await fetch('/dashboard/api/jobs', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error('Failed to add job');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to add job');
+                }
                 
                 showToast('Job added successfully!');
                 setTimeout(() => location.reload(), 1000);
             } catch (error) {
-                showToast('Error: Could not add job.', 'error');
+                showToast(`Error: ${error.message}`, 'error');
             }
         });
+        
+        // This is the key fix: we only add the listener if the form exists on the page.
+        const addEventForm = document.getElementById('add-event-form');
+        if (addEventForm) {
+            addEventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                
+                try {
+                    const response = await fetch('/dashboard/api/events', { method: 'POST', body: formData });
+                    if (!response.ok) throw new Error('Failed to add event');
+                    showToast('Event added successfully!');
+                    setTimeout(() => location.reload(), 1000); 
+                } catch (error) {
+                    showToast('Error: Could not add event.', 'error');
+                }
+            });
+        }
     </script>
 </body>
 </html>
