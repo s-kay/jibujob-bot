@@ -26,14 +26,18 @@ async def login_page(request: Request):
 @router.get("/", response_class=HTMLResponse)
 async def dashboard_home(request: Request, db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
     """Serves the main dashboard page, pre-loading it with the partner's data."""
-    events = crud.get_events_by_partner(db, partner_id=current_partner.id)
-    featured_jobs = crud.get_featured_jobs_by_partner(db, partner_id=current_partner.id)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request, 
-        "partner_name": current_partner.partner_name,
-        "events": events,
-        "featured_jobs": featured_jobs
-    })
+
+    if current_partner.role == 'tvet': 
+        events = crud.get_events_by_partner(db, partner_id=current_partner.id)
+
+        featured_jobs = crud.get_featured_jobs_by_partner(db, partner_id=current_partner.id)
+        
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request, 
+            "partner_name": current_partner.partner_name,
+            "events": events,
+            "featured_jobs": featured_jobs
+        })
 
 # --- Authentication Endpoints ---
 
