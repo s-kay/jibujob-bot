@@ -52,6 +52,7 @@ class Partner(Base):
     username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     partner_name: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String, default="employer")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # --- NEW RELATIONSHIPS ---
     events: Mapped[List["Event"]] = relationship(back_populates="partner")
