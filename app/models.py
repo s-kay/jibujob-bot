@@ -86,6 +86,7 @@ class FeaturedJob(Base):
     __tablename__ = "featured_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
     keywords: Mapped[str] = mapped_column(String) # Stored as a comma-separated string
     link: Mapped[str] = mapped_column(String, nullable=False)
     partner_name: Mapped[str] = mapped_column(String)
