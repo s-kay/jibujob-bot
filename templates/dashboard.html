@@ -39,9 +39,10 @@
 
         <!-- Main Content -->
         <main class="flex-1 p-4 md:p-8">
-            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 {% if partner_role == 'tvet' %}lg:grid-cols-2{% endif %} gap-8">
                 
                 <!-- Event Management Section -->
+                {% if partner_role == 'tvet' %}
                 <div class="bg-white p-6 rounded-lg shadow">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Manage Events</h2>
                     <form id="add-event-form" class="space-y-4">
