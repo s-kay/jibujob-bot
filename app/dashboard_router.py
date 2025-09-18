@@ -31,7 +31,7 @@ async def dashboard_home(request: Request, db: Session = Depends(get_db), curren
         events = crud.get_events_by_partner(db, partner_id=current_partner.id)
 
         featured_jobs = crud.get_featured_jobs_by_partner(db, partner_id=current_partner.id)
-        
+
         return templates.TemplateResponse("dashboard.html", {
             "request": request, 
             "partner_name": current_partner.partner_name,
@@ -79,7 +79,7 @@ async def api_delete_event(event_id: int, db: Session = Depends(get_db), current
     return {"status": "success", "message": "Event deleted!"}
 
 @router.post("/api/jobs")
-async def api_create_featured_job(title: str = Form(...), keywords: str = Form(...), link: str = Form(...), db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
+async def api_create_featured_job(title: str = Form(...), keywords: str = Form(...), link: str = Form(...), description: str = Form(...), db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
     job_data = {"title": title, "keywords": keywords, "link": link}
     crud.create_featured_job(db, job_data=job_data, partner=current_partner)
     return {"status": "success", "message": "Job created!"}
