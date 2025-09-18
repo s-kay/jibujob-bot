@@ -83,7 +83,7 @@ async def api_delete_event(event_id: int, db: Session = Depends(get_db), current
 
 @router.post("/api/jobs")
 async def api_create_featured_job(title: str = Form(...), keywords: str = Form(...), link: str = Form(...), description: str = Form(...), db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
-    job_data = {"title": title, "keywords": keywords, "link": link}
+    job_data = {"title": title, "keywords": keywords, "link": link, "description": description}
     crud.create_featured_job(db, job_data=job_data, partner=current_partner)
     return {"status": "success", "message": "Job created!"}
 
