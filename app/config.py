@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     # Database configuration
     DATABASE_URL: str = "sqlite:///./kazileo.db"
 
+    # This is the public URL  
+    BASE_URL: str = "https://jibujob-bot.onrender.com"
 
     # WhatsApp API configuration
     WHATSAPP_TOKEN: str = ""
