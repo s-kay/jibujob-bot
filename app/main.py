@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Any
 from fastapi.staticfiles import StaticFiles
 
-# Import all the necessary modules
-from . import models, crud, services, whatsapp_client, dashboard_router
+from . import models, crud, services, whatsapp_client
 from .database import engine, get_db
 from .config import settings
 from pydantic import BaseModel, Field
+from . import dashboard_router
 
 # Create all database tables on startup
 models.Base.metadata.create_all(bind=engine)
@@ -17,15 +17,8 @@ models.Base.metadata.create_all(bind=engine)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="KaziLeo Platform")
+app = FastAPI(title="KaziLeo WhatsApp Agent")
 
-# Mount the 'static' directory to serve images and other assets
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# This is the crucial line that activates all the dashboard URLs
-app.include_router(dashboard_router.router)
-
-# --- Pydantic Models for Webhook Validation ---
 class TextMessage(BaseModel):
     body: str
 
@@ -48,7 +41,7 @@ class Value(BaseModel):
     metadata: dict
     contacts: Optional[List[Contact]] = None
     messages: Optional[List[Message]] = None
-    statuses: Optional[List[Any]] = None
+    statuses: Optional[List[Any]] = None # To handle status updates
 
 class Change(BaseModel):
     value: Value
@@ -62,8 +55,11 @@ class WebhookRequest(BaseModel):
     object: str
     entry: List[Entry]
 
+# ---serve static files from the "static" directory ---
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# --- Web Pilot & WhatsApp Webhook Endpoints ---
+
+app.include_router(dashboard_router.router)
 
 @app.get("/", response_class=FileResponse, include_in_schema=False)
 def read_root():
@@ -71,6 +67,7 @@ def read_root():
 
 @app.post("/webchat", tags=["Web Pilot"])
 async def handle_webchat(request: Request, db: Session = Depends(get_db)):
+    """Endpoint for the web pilot to send messages."""
     data = await request.json()
     user_input = data.get("message", "")
     session_id = data.get("session_id", "web-default")
@@ -79,7 +76,7 @@ async def handle_webchat(request: Request, db: Session = Depends(get_db)):
     await services.process_message(db, session, user_input, is_new_user=is_new)
     crud.update_session(db, session)
     
-    replies = await whatsapp_client.get_mock_replies()
+    replies = whatsapp_client.get_mock_replies()
     return {"replies": replies}
 
 @app.get("/webhook", tags=["WhatsApp"])
