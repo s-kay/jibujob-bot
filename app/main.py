@@ -61,9 +61,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(dashboard_router.router)
 
-@app.get("/health")
-def health_check():
-        return {"status": "ok"}
+@app.get("/test")
+def test_route():
+    return {"message": "Test route is working!"}
 
 @app.get("/", response_class=FileResponse, include_in_schema=False)
 def read_root():
