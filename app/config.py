@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     SESSION_TIMEOUT_MINUTES: int = 5
 
     # --- NEW SETTINGS FOR PARTNER DASHBOARD ---
-    JWT_SECRET_KEY: str = "a_very_long_and_super_secret_string_for_jwt_tokens"
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
 
     model_config = SettingsConfigDict(env_file=env_path, extra='ignore')
