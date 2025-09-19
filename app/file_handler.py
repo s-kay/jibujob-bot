@@ -11,7 +11,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import re
 
 # We are switching to a more reliable, well-known service: file.io
-UPLOAD_URL = "https://file.io"
+UPLOAD_URL = "https://www.file.io"
 
 def sanitize_text(text: str) -> str:
     """Removes unsupported characters for reportlab PDF generation."""
