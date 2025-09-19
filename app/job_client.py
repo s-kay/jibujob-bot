@@ -2,6 +2,8 @@ import logging
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from app.models import FeaturedJob
+from app.config import settings
+
 
 # THE UPGRADE: The mock data is now a list of dictionaries, each with a full description.
 MOCK_JOBS: List[Dict[str, Any]] = [
@@ -52,11 +54,10 @@ async def fetch_jobs(db: Session, keyword: str) -> List[Dict[str, Any]]:
         
     keyword_lower = keyword.lower()
     found_jobs = []
-    found_links = set() # To prevent duplicates
+    found_links = set()
 
     try:
         # --- PRIORITY 1: Search the live database for partner-submitted jobs ---
-        # The '%' are wildcards for a 'LIKE' search in SQL
         db_jobs = db.query(FeaturedJob).filter(
             (FeaturedJob.title.ilike(f"%{keyword_lower}%")) |
             (FeaturedJob.keywords.ilike(f"%{keyword_lower}%")) |
@@ -64,21 +65,26 @@ async def fetch_jobs(db: Session, keyword: str) -> List[Dict[str, Any]]:
         ).order_by(FeaturedJob.created_at.desc()).all()
 
         for job in db_jobs:
+            # Generate the internal KaziLeo Job Page URL
+            internal_link = f"{settings.BASE_URL}/dashboard/jobs/{job.id}"
+            
             job_data = {
+                "id": job.id, # Pass the ID for selection
                 "title": f"⭐ *{job.title}* (Partner: {job.partner_name})",
-                "link": job.link,
+                "link": internal_link, # Use the new internal link
                 "description": job.description,
-                # We can add other fields here if needed in the future
             }
             found_jobs.append(job_data)
+            # We use the original external link to prevent duplicates from the mock list
             found_links.add(job.link)
 
-        # --- PRIORITY 2: Search the fallback mock list for standard jobs ---
+        # --- PRIORITY 2: Search the fallback mock list ---
         for job in MOCK_JOBS:
             searchable_text = job['title'].lower() + " " + " ".join(job.get('keywords', []))
             if keyword_lower in searchable_text and job['link'] not in found_links:
-                # We create a dictionary with the same structure for consistency
                 job_data = {
+                    # Generate a fake ID for selection purposes
+                    "id": f"mock_{MOCK_JOBS.index(job)}", 
                     "title": f"*{job['title']}*",
                     "link": job['link'],
                     "description": job.get('description', '')
@@ -91,6 +97,7 @@ async def fetch_jobs(db: Session, keyword: str) -> List[Dict[str, Any]]:
     except Exception as e:
         logging.error(f"Error fetching jobs: {e}", exc_info=True)
         return []
+
 
 
 
