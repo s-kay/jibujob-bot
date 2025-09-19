@@ -102,3 +102,20 @@ async def generate_cover_letter(cv_data: str, company: str, role: str, job_descr
     )
     
     return await get_ai_response(system_prompt, user_prompt)
+
+async def extract_key_skills(job_description: str) -> str | None:
+    """
+    Uses AI to analyze a job description and extract the top 3-4 key skills or qualifications.
+    """
+    system_prompt = (
+        "You are an expert HR recruitment assistant. Your task is to analyze the following job description "
+        "and extract the top 3-4 most important skills, qualifications, or experience requirements. "
+        "Present them as a clean, simple, bulleted list. Do not add any extra commentary, heading, or introduction. "
+        "For example: '- Proficiency in QuickBooks\n- CPA Part 2 certification\n- 3+ years of experience'"
+    )
+
+    user_prompt = (
+        f"Here is the job description:\n\n---\n\n{job_description}\n\n---"
+    )
+    
+    return await get_ai_response(system_prompt, user_prompt)
