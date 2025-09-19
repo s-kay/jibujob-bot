@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- The job title will be dynamically inserted here by the backend -->
+    <title>{{ job.title or 'Job Details' }} - KaziLeo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Simple style to make the job description text format nicely */
+        .job-description p { margin-bottom: 1rem; }
+        .job-description ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .job-description li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm p-4">
+        <div class="max-w-4xl mx-auto flex items-center space-x-3">
+            <img src="/static/kazileo-logo.png" alt="KaziLeo Logo" class="h-14 w-18">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">KaziLeo</h1>
+                <p class="text-sm text-gray-500">Your Career Companion</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Job Details Content -->
+    <main class="py-8 px-4">
+        <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-lg shadow">
+            <!-- Job Title -->
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">{{ job.title or 'Job Title Not Available' }}</h1>
+            
+            <!-- Partner/Company Name -->
+            <p class="mt-2 text-lg text-gray-600">Posted by: <span class="font-semibold">{{ job.partner_name or 'Confidential Employer' }}</span></p>
+            
+            <hr class="my-6">
+
+            <!-- Full Job Description -->
+            <div class="prose max-w-none text-gray-700 job-description">
+                <!-- The backend will pass the description here. The 'safe' filter allows HTML formatting if needed. -->
+                <p>{{ job.description | safe }}</p>
+            </div>
+
+            <hr class="my-8">
+
+            <!-- Apply Now Button -->
+            <div class="text-center">
+                <a href="{{ job.link }}" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="inline-block bg-[#FFA500] hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 text-lg">
+                    Apply Now
+                </a>
+                <p class="mt-3 text-xs text-gray-500">You will be redirected to the employer's official application page.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-sm text-gray-500">
+        <p>&copy; 2025 KaziLeo. All rights reserved.</p>
+        <p>Empowering Kenya's Youth.</p>
+    </footer>
+
+</body>
+</html>
