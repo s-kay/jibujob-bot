@@ -1,19 +1,19 @@
 import os
 import logging
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+# THE FIX: Import the Session object for correct type hinting
+from sqlalchemy.orm import sessionmaker, Session
 import sys
 import asyncio
 
-# Add the project root to the Python path to allow importing from 'app'
+# Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from app.models import Base, UserSession
+from app.models import Base, UserSession, FeaturedJob
 from app.config import settings
-from app.job_client import fetch_jobs
 from app.whatsapp_client import send_template_message
+from app.job_client import MOCK_JOBS
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Database Setup ---
@@ -59,27 +59,38 @@ INTEREST_KEYWORDS = {
     "environmental": ["environmental", "sustainability", "conservation", "ecologist"],
     "tourism": ["tourism", "travel", "tour guide", "hospitality"],
     "freelance": ["freelance", "contractor", "gig", "remote"],
-    "other": ["other", "miscellaneous", "various"], 
+    "projects": ["project", "project manager", "PMO", "scrum master"], 
+    "other": ["other", "miscellaneous", "various"], # Catch-all for uncategorized interests
 }
 
-async def fetch_jobs_for_interest(interest: str) -> list[str]:
-    """Fetches jobs for a given interest using multiple related keywords."""
+# THE FIX: The type hint for `db` is now correctly set to `Session`.
+async def fetch_jobs_for_interest(db: Session, interest: str) -> list[str]:
+    """Helper function to fetch jobs using multiple related keywords."""
     search_terms = INTEREST_KEYWORDS.get(interest.lower(), [interest])
     all_found_jobs = set()
+    
+    # --- Fetch from Database ---
     for term in search_terms:
-        # NOTE: The original file had a bug here, calling fetch_jobs from the wrong module.
-        # This assumes you have a standalone job_client.py with a fetch_jobs function.
-        # If fetch_jobs is in THIS file, you would just call `await fetch_jobs(term)`.
-        # For this example, I am assuming it's in `app.job_client`.
-        from app.job_client import fetch_jobs as fetch_jobs_from_client
-        jobs = await fetch_jobs_from_client(term)
-        if jobs:
-            for job in jobs:
-                all_found_jobs.add(job)
+        db_jobs = db.query(FeaturedJob).filter(
+            (FeaturedJob.keywords.ilike(f"%{term}%")) |
+            (FeaturedJob.title.ilike(f"%{term}%"))
+        ).all()
+        for job in db_jobs:
+            formatted_job = f"⭐ *{job.title}* (Partner: {job.partner_name}) - {job.link}"
+            all_found_jobs.add(formatted_job)
+
+    # --- Fetch from Mock Fallback ---
+    for term in search_terms:
+        for job in MOCK_JOBS:
+            searchable_text = job['title'].lower() + " " + " ".join(job.get('keywords', []))
+            if term in searchable_text:
+                formatted_job = f"*{job['title']}* - {job['link']}"
+                all_found_jobs.add(formatted_job)
+
     return list(all_found_jobs)
 
 async def send_job_alerts():
-    """The main function to find and send job alerts using pre-approved templates."""
+    """Finds and sends job alerts using the new unified job client."""
     logging.info("Starting job alert check...")
     db = SessionLocal()
     
@@ -90,28 +101,21 @@ async def send_job_alerts():
             logging.info("No users with saved job interests found. Exiting.")
             return
 
-        logging.info(f"Found {len(users_with_interest)} users with job interests.")
-
         for user in users_with_interest:
             if not user.job_interest or not user.user_name:
                 continue
 
             interest = user.job_interest.strip()
-            logging.info(f"Searching for new jobs for user {user.phone_number} with interest: '{interest}'")
-            
-            new_jobs = await fetch_jobs_for_interest(interest)
+            new_jobs = await fetch_jobs_for_interest(db, interest)
             
             if new_jobs:
                 logging.info(f"Found {len(new_jobs)} new jobs for '{interest}'. Sending alert to {user.phone_number}...")
                 
-                jobs_to_send = new_jobs[:3]
-                
                 job_params = []
                 for i in range(3):
-                    if i < len(jobs_to_send):
-                        job_params.append(f"• {jobs_to_send[i]}")
+                    if i < len(new_jobs):
+                        job_params.append(f"• {new_jobs[i]}")
                     else:
-                        # THE FIX IS HERE: Use a single space instead of an empty string.
                         job_params.append(" ")
 
                 components = [{
