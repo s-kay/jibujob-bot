@@ -19,24 +19,25 @@ async def login_page(request: Request):
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard_home(request: Request, db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
-    """
-    Serves the main dashboard page, pre-loading it with the partner's data
-    and tailoring the view based on their role.
-    """
+    """Serves the main dashboard page, pre-loading it with the partner's data."""
+    
+    # Initialize events (empty for employers, populated for TVET)
     events = []
-    # Only fetch events if the partner is a TVET
-    if current_partner.role == 'tvet':
+    if current_partner.role == 'tvet': 
         events = crud.get_events_by_partner(db, partner_id=current_partner.id)
-        
+
+    # Get featured jobs for ALL users (both TVET and employer)
     featured_jobs = crud.get_featured_jobs_by_partner(db, partner_id=current_partner.id)
-    
+
+    # Set partner name for ALL users
     partner_name = current_partner.partner_name if current_partner.partner_name else "Partner"
-    
+
+    # Return dashboard for ALL users with appropriate data
     return templates.TemplateResponse("dashboard.html", {
-        "request": request, 
+        "request": request,
         "partner_name": partner_name,
         "partner_role": current_partner.role,
-        "events": events,
+        "events": events,  # Empty for employers, populated for TVET
         "featured_jobs": featured_jobs
     })
 
