@@ -61,6 +61,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(dashboard_router.router)
 
+@app.get("/health")
+def health_check():
+        return {"status": "ok"}
+
 @app.get("/", response_class=FileResponse, include_in_schema=False)
 def read_root():
     return "index.html"
@@ -121,6 +125,4 @@ async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db))
     
     return Response(status_code=200)
 
-@app.get("/health")
-def health_check():
-        return {"status": "ok"}
+
