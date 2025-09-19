@@ -107,9 +107,12 @@ async def process_message(db: Session, session: models.UserSession, message_text
     # --- In-Flow Conversation Logic ---
     # --- Job Search Flow ---   
     if session.current_menu == "jobs":
-            # Handle follow-up after the agent provides its analysis
+        session.current_menu = "jobs"
+        # --- THE "BEST OF BOTH WORLDS" AGENT LOGIC ---
+
+        # Step 5: Handle the follow-up after an agent run or job view
         if state.get("awaiting_another_search"):
-            clear_temp_state()
+            state.clear()
             if "yes" in message_text:
                 # Go back to the start of the job flow
                 if session.job_interest:
@@ -123,7 +126,23 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 reply = f"No problem! Let me know what you'd like to do next.\n\n{text_responses.get_conversational_menu_prompt()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
 
-        # Handle the user's selection of a specific job
+        # Step 4: Handle the user's decision to run the AI analysis
+        elif state.get("awaiting_analysis_confirmation"):
+            selected_job = state.get("selected_job_for_analysis")
+            if "yes" in message_text and selected_job:
+                state.clear()
+                report, success = await application_assistant.analyze_and_draft(session, selected_job)
+                await whatsapp_client.send_whatsapp_message(session.phone_number, report)
+                
+                state["awaiting_another_search"] = True
+                await whatsapp_client.send_whatsapp_message(session.phone_number, "Would you like to search for another job? (yes/no)")
+            else:
+                state.clear()
+                state["awaiting_another_search"] = True
+                reply = "Okay, no problem. Would you like to select a different job from the list, or would you prefer to `search for a new role`?"
+                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+
+        # Step 3: Handle the user's selection of a specific job
         elif state.get("awaiting_job_selection"):
             try:
                 choice_index = int(message_text_original) - 1
@@ -131,69 +150,51 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 
                 if 0 <= choice_index < len(job_list):
                     selected_job = job_list[choice_index]
-                    clear_temp_state()
+                    state.clear()
                     
-                    report, success = await application_assistant.analyze_and_draft(session, selected_job)
-                    await whatsapp_client.send_whatsapp_message(session.phone_number, report)
-                    
-                    # Ask to search again instead of returning to the menu
-                    state["awaiting_another_search"] = True
-                    await whatsapp_client.send_whatsapp_message(session.phone_number, "Would you like to search for another job? (yes/no)")
+                    summary = (selected_job['description'] or '')[:150] + "..."
+                    job_card = (
+                        f"Here are the details for that role:\n\n"
+                        f"*{selected_job['title']}*\n\n"
+                        f"*Summary:*\n{summary}\n\n"
+                        f"*Full Details & Apply:*\n{selected_job['link']}"
+                    )
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, job_card)
 
+                    if resume_builder.has_existing_cv(session.resume_data or {}):
+                        state["awaiting_analysis_confirmation"] = True
+                        state["selected_job_for_analysis"] = selected_job
+                        await whatsapp_client.send_whatsapp_message(session.phone_number, "This looks like a great opportunity. Would you like me to analyze your CV against this role and draft a tailored cover letter for you? (yes/no)")
+                    else:
+                        state["awaiting_another_search"] = True
+                        await whatsapp_client.send_whatsapp_message(session.phone_number, "To get an AI analysis, you'll need a CV first. You can ask me to `build a CV` from the main menu. For now, would you like to search for another job? (yes/no)")
                 else:
-                    reply = "That's not a valid number from the list. Please try again."
-                    await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "That's not a valid number from the list. Please try again.")
 
             except (ValueError, TypeError):
-                reply = "Please reply with the number of the job you're interested in."
-                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-
-        # Handle user providing a job role to search for
+                await whatsapp_client.send_whatsapp_message(session.phone_number, "Please reply with the number of the job you're interested in.")
+        
+        # Step 2: Handle the user providing a job role to search for
         elif state.get("awaiting_job_role"):
-            clear_temp_state()
             session.job_interest = message_text_original
             await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_empathetic_response("searching", interest=session.job_interest))
-            
             listings_data = await job_client.fetch_jobs(db, message_text)
             
             if listings_data:
-                formatted_listings = [f"{i}. *{job['title']}*" for i, job in enumerate(listings_data, 1)]
+                formatted_listings = [f"{i}. {job['title']}" for i, job in enumerate(listings_data, 1)]
                 reply = f"Good news! I found these opportunities for *{session.job_interest}*:\n\n" + "\n".join(formatted_listings)
-                reply += "\n\nReply with the number of the job you'd like me to analyze for you."
-                state["awaiting_job_selection"] = True
+                reply += "\n\nReply with the number of the job you'd like to view."
+                state.clear(); state["awaiting_job_selection"] = True
                 state["last_job_search_results"] = listings_data
             else:
                 reply = text_responses.get_empathetic_response("no_jobs_found", interest=session.job_interest)
-                session.current_menu = "main"
+                session.current_menu = "main"; state.clear()
                 reply += f"\n\n{text_responses.get_conversational_menu_prompt()}"
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-
-        # Handle confirmation for a previously saved interest
-        elif state.get("awaiting_job_confirm"):
-            clear_temp_state()
-            if "yes" in message_text and session.job_interest:
-                # If yes, search for the saved interest
-                await whatsapp_client.send_whatsapp_message(session.phone_number, text_responses.get_empathetic_response("searching", interest=session.job_interest))
-                listings_data = await job_client.fetch_jobs(db, session.job_interest)
-                if listings_data:
-                    formatted_listings = [f"{i}. *{job['title']}*" for i, job in enumerate(listings_data, 1)]
-                    reply = f"Okay, here are the latest opportunities for *{session.job_interest}*:\n\n" + "\n".join(formatted_listings)
-                    reply += "\n\nReply with the number of the job you'd like me to analyze for you."
-                    state["awaiting_job_selection"] = True
-                    state["last_job_search_results"] = listings_data
-                else:
-                    reply = text_responses.get_empathetic_response("no_jobs_found", interest=session.job_interest)
-                    session.current_menu = "main"
-                    reply += f"\n\n{text_responses.get_conversational_menu_prompt()}"
-                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-            else:
-                # If no, ask for a new one
-                state["awaiting_job_role"] = True
-                reply = "No problem. What new job role are you looking for?"
-                await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
-        
-        else: # This is the initial entry point for the "jobs" flow
-            clear_temp_state()
+            
+        # Step 1: Handle the initial entry into the "jobs" flow, including checking for saved interests
+        else: 
+            state.clear()
             if session.job_interest:
                 state["awaiting_job_confirm"] = True
                 reply = f"I remember you were interested in *{session.job_interest}* jobs. Shall I search for those again? (yes/no)"
