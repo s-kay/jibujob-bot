@@ -2,43 +2,41 @@ from fastapi import APIRouter, Depends, Request, Form, status, HTTPException, Re
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import timedelta, datetime
+import pytz
 
 from app import crud, models, auth
 from app.database import get_db
 
-# Create a new router for the dashboard
-router = APIRouter(
-    prefix="/dashboard",
-    tags=["Dashboard"]
-)
-
-# Configure the HTML template directory
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 templates = Jinja2Templates(directory="templates")
 
 # --- Page Rendering Endpoints ---
 
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
 @router.get("/", response_class=HTMLResponse)
 async def dashboard_home(request: Request, db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
-    """Serves the main dashboard page, pre-loading it with the partner's data."""
-    
-    # Initialize events (empty for employers, populated for TVET)
+    """
+    Serves the main dashboard page, pre-loading it with the partner's data
+    and tailoring the view based on their role.
+    """
     events = []
-    if current_partner.role == 'tvet': 
+    # Only fetch events if the partner is a TVET
+    if current_partner.role == 'tvet':
         events = crud.get_events_by_partner(db, partner_id=current_partner.id)
-
-    # Get featured jobs for ALL users (both TVET and employer)
+        
     featured_jobs = crud.get_featured_jobs_by_partner(db, partner_id=current_partner.id)
-
-    # Set partner name for ALL users
+    
     partner_name = current_partner.partner_name if current_partner.partner_name else "Partner"
-
-    # Return dashboard for ALL users with appropriate data
+    
     return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+        "request": request, 
         "partner_name": partner_name,
         "partner_role": current_partner.role,
-        "events": events,  # Empty for employers, populated for TVET
+        "events": events,
         "featured_jobs": featured_jobs
     })
 
@@ -46,13 +44,9 @@ async def dashboard_home(request: Request, db: Session = Depends(get_db), curren
 
 @router.post("/token")
 async def login_for_access_token(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    """
-    Handles the login form submission.
-    It verifies credentials and returns a redirect response with a session cookie.
-    """
     partner = crud.get_partner_by_username(db, username=username)
+    
     if not partner or not auth.verify_password(password, partner.hashed_password):
-        # pass an error message back to the login page
         error_message = "Incorrect username or password. Please try again."
         return templates.TemplateResponse("login.html", {"request": request, "error": error_message})
     
@@ -68,8 +62,11 @@ async def logout():
     return response
 
 # --- API Endpoints for Data Management ---
+
 @router.post("/api/events")
 async def api_create_event(title: str = Form(...), description: str = Form(...), date: str = Form(...), location: str = Form(...), db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
+    if current_partner.role != 'tvet':
+        raise HTTPException(status_code=403, detail="Only TVET partners can create events.")
     event_data = {"title": title, "description": description, "date": date, "location": location}
     crud.create_event(db, event_data=event_data, partner=current_partner)
     return {"status": "success", "message": "Event created!"}
@@ -82,7 +79,16 @@ async def api_delete_event(event_id: int, db: Session = Depends(get_db), current
     return {"status": "success", "message": "Event deleted!"}
 
 @router.post("/api/jobs")
-async def api_create_featured_job(title: str = Form(...), keywords: str = Form(...), link: str = Form(...), description: str = Form(...), db: Session = Depends(get_db), current_partner: models.Partner = Depends(auth.get_current_partner)):
+async def api_create_featured_job(
+    title: str = Form(...), 
+    keywords: str = Form(...), 
+    link: str = Form(...), 
+    # --- THE FIX: We now correctly accept the 'description' from the form ---
+    description: str = Form(...),
+    db: Session = Depends(get_db), 
+    current_partner: models.Partner = Depends(auth.get_current_partner)
+):
+    # --- AND HERE: We add it to the data we send to the database handler ---
     job_data = {"title": title, "keywords": keywords, "link": link, "description": description}
     crud.create_featured_job(db, job_data=job_data, partner=current_partner)
     return {"status": "success", "message": "Job created!"}
@@ -93,3 +99,4 @@ async def api_delete_featured_job(job_id: int, db: Session = Depends(get_db), cu
     if not success:
         raise HTTPException(status_code=404, detail="Job not found or you do not have permission to delete it.")
     return {"status": "success", "message": "Job deleted!"}
+
