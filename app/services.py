@@ -140,15 +140,82 @@ async def process_message(db: Session, session: models.UserSession, message_text
                 reply = "No problem! Let me know what you'd like to do next.\n\nWhat would you like to do, find a job, build a CV, or practice for an interview? Just let me know!"
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
 
+        # NEW STEP: Handle user actions after job analysis
+        elif state.get("awaiting_post_analysis_action"):
+            analyzed_job = state.get("analyzed_job")
+            
+            if message_text == "cl":
+                # User wants to generate cover letter
+                state.clear()
+                if analyzed_job:
+                    # Set up cover letter data and redirect to cover letter flow
+                    if session.cover_letter_data is None:
+                        session.cover_letter_data = {}
+                    # Extract company from job title or use "the company"  
+                    company_name = analyzed_job.get("company", "the company")
+                    session.cover_letter_data["company_name"] = company_name
+                    session.cover_letter_data["job_role"] = analyzed_job.get("title", "the role")
+                    
+                    session.current_menu = "cover_letter"
+                    state["awaiting_cl_jd"] = True
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, f"Perfect! To create your cover letter for *{analyzed_job.get('title')}*, please paste the full job description here.")
+                else:
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, I lost track of the job. Please search again.")
+                    state["awaiting_job_role"] = True
+                    
+            elif message_text == "0":
+                # User wants to go home
+                state.clear()
+                session.current_menu = "main"
+                await whatsapp_client.send_whatsapp_message(session.phone_number, "No problem! Let me know what you'd like to do next.\n\nWhat would you like to do, find a job, build a CV, or practice for an interview? Just let me know!")
+                
+            else:
+                # Check if it's a number for selecting another job listing
+                try:
+                    choice_index = int(message_text_original) - 1
+                    job_list = state.get("last_job_search_results", [])
+                    
+                    if 0 <= choice_index < len(job_list):
+                        selected_job = job_list[choice_index]
+                        state["analyzed_job"] = selected_job
+                        
+                        # Analyze the new job selection
+                        cv_text = resume_builder.format_cv(session.resume_data)
+                        feedback = await ai_client.optimize_resume(cv_text, selected_job.get("description", ""))
+                        
+                        if feedback:
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, feedback)
+                            reply = "Type 'cl' to generate cover letter or select another listing for analysis or '0' for home."
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                        else:
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, I couldn't analyze this job right now. Please try another selection.")
+                    else:
+                        await whatsapp_client.send_whatsapp_message(session.phone_number, "That's not a valid number. Type 'cl' for cover letter, select a job number, or '0' for home.")
+                        
+                except (ValueError, TypeError):
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "Please type 'cl' for cover letter, select a job number from the list, or '0' for home.")
+
         # Step 4: Handle the user's decision to run the AI analysis
         elif state.get("awaiting_analysis_confirmation"):
             selected_job = state.get("selected_job_for_analysis")
             if "yes" in message_text and selected_job:
-                state.clear()
-                report, success = await application_assistant.analyze_and_draft(session, selected_job)
-                await whatsapp_client.send_whatsapp_message(session.phone_number, report)
-                state["awaiting_another_search"] = True
-                await whatsapp_client.send_whatsapp_message(session.phone_number, "Would you like to search for another job? (yes/no)")
+                # Analyze CV against job and provide feedback only
+                cv_text = resume_builder.format_cv(session.resume_data)
+                feedback = await ai_client.optimize_resume(cv_text, selected_job.get("description", ""))
+                
+                if feedback:
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, feedback)
+                    # THE FIX: Give user options after analysis instead of auto-generating cover letter
+                    state.clear()
+                    state["awaiting_post_analysis_action"] = True
+                    state["analyzed_job"] = selected_job
+                    reply = "Type 'cl' to generate cover letter or select another listing for analysis or '0' for home."
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                else:
+                    state.clear()
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, I couldn't analyze the job right now. Please try again later.")
+                    state["awaiting_another_search"] = True
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "Would you like to search for another job? (yes/no)")
             else:
                 state.clear()
                 state["awaiting_another_search"] = True
@@ -165,17 +232,26 @@ async def process_message(db: Session, session: models.UserSession, message_text
                     state["post_cv_creation_hook"] = "analyze_job"
                     state["selected_job_for_post_cv"] = state.get("last_viewed_job")
                     session.current_menu = "resume_builder"
-                    await whatsapp_client.send_whatsapp_message(session.phone_number, "You'll need a CV first. Just type `CV` to build one now.")
+                    await whatsapp_client.send_whatsapp_message(session.phone_number, "To get an AI analysis, you'll need a CV first. Just type `CV` to build one now.")
                     crud.update_session(db, session)
                     return
                 else:
                     selected_job = state.get("last_viewed_job")
                     if selected_job:
-                        state.clear()
-                        report, success = await application_assistant.analyze_and_draft(session, selected_job)
-                        await whatsapp_client.send_whatsapp_message(session.phone_number, report)
-                        state["awaiting_another_search"] = True
-                        await whatsapp_client.send_whatsapp_message(session.phone_number, "Would you like to search for another job? (yes/no)")
+                        # THE FIX: Analyze and provide feedback with options
+                        cv_text = resume_builder.format_cv(session.resume_data)
+                        feedback = await ai_client.optimize_resume(cv_text, selected_job.get("description", ""))
+                        
+                        if feedback:
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, feedback)
+                            state.clear()
+                            state["awaiting_post_analysis_action"] = True
+                            state["analyzed_job"] = selected_job
+                            state["last_job_search_results"] = state.get("last_job_search_results", [])  # Preserve job list
+                            reply = "Type 'cl' to generate cover letter or select another listing for analysis or '0' for home."
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
+                        else:
+                            await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, I couldn't analyze this job right now. Please try selecting another job.")
                     else:
                         await whatsapp_client.send_whatsapp_message(session.phone_number, "Sorry, I seem to have lost track of the job you were viewing. Please select a number from the list again.")
 
