@@ -16,13 +16,7 @@ router = APIRouter(
 # Configure the HTML template directory
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/jobs/{job_id}", response_class=HTMLResponse)
-async def view_job_page(request: Request, job_id: int, db: Session = Depends(get_db)):
-    """Serves the public-facing page for a single job."""
-    job = crud.get_featured_job_by_id(db, job_id=job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return templates.TemplateResponse("job_details.html", {"request": request, "job": job})
+
 
 # --- Page Rendering Endpoints ---
 
