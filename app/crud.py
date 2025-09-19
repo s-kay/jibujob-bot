@@ -123,6 +123,10 @@ def get_featured_jobs_by_partner(db: Session, partner_id: int) -> List[models.Fe
     """Fetches all featured jobs for a specific partner."""
     return db.query(models.FeaturedJob).filter(models.FeaturedJob.partner_id == partner_id).order_by(models.FeaturedJob.created_at.desc()).all()
 
+def get_featured_job_by_id(db: Session, job_id: int) -> models.FeaturedJob | None:
+    """Fetches a single featured job by its unique ID."""
+    return db.query(models.FeaturedJob).filter(models.FeaturedJob.id == job_id).first()
+
 def create_featured_job(db: Session, job_data: Dict[str, Any], partner: models.Partner) -> models.FeaturedJob:
     """Creates a new featured job for a partner."""
     new_job = models.FeaturedJob(
