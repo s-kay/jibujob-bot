@@ -121,3 +121,6 @@ async def handle_webhook(request: WebhookRequest, db: Session = Depends(get_db))
     
     return Response(status_code=200)
 
+@app.get("/health")
+def health_check():
+        return {"status": "ok"}
