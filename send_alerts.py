@@ -23,10 +23,10 @@ Base.metadata.create_all(bind=engine)
 
 # --- Smarter Keyword Mapping ---
 INTEREST_KEYWORDS = {
-    "it": ["it", "software", "developer", "tech", "engineer", "SOC", "support", "AI engineer", "automation", "architect", "cloud", "network", "systems", "infrastructure"],
+    "it": ["it", "software", "developer", "tech", "engineer", "SOC", "support", "AI engineer", "automation", "architect", "cloud", "network", "systems", "infrastructure","ict"],
     "sales": ["sales", "business development", "retail", "agent"],
     "admin": ["admin", "assistant", "clerical", "office support", "HR", "Human Resource", "People","Culture"],
-    "accountant": ["accountant", "finance", "audit", "bookkeeping"],
+    "accountant": ["accountant", "finance", "audit", "bookkeeping","accounting", "CPA", "CMA"],
     "driver": ["driver", "driving", "logistics"],
     "internship": ["internship", "intern"],
     "marketing": ["marketing", "SEO", "content", "social media", "digital"],
@@ -34,7 +34,7 @@ INTEREST_KEYWORDS = {
     "education": ["education", "teacher", "tutor", "instructor"],
     "construction": ["construction", "builder", "contractor", "foreman"],
     "hospitality": ["hospitality", "hotel", "restaurant", "chef", "waiter"],
-    "customer service": ["customer service", "support", "call center", "client relations"],
+    "customer service": ["customer service", "support", "call center", "client relations", "customer"],
     "finance": ["finance", "banking", "investment", "financial analyst"],
     "engineering": ["engineering", "mechanical", "civil", "electrical", "architect"],
     "creative": ["creative", "designer", "artist", "photographer", "videographer"],
@@ -60,6 +60,7 @@ INTEREST_KEYWORDS = {
     "tourism": ["tourism", "travel", "tour guide", "hospitality"],
     "freelance": ["freelance", "contractor", "gig", "remote"],
     "projects": ["project", "project manager", "PMO", "scrum master"], 
+    "interior design": ["interior design", "interior decorator", "furniture", "home decor"],
     "other": ["other", "miscellaneous", "various"], # Catch-all for uncategorized interests
 }
 
