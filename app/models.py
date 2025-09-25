@@ -28,6 +28,9 @@ class UserSession(Base):
     last_active: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     feedbacks: Mapped[List["Feedback"]] = relationship(back_populates="user")
+    # --- TRACK SENT ALERTS ---
+    sent_job_alerts: Mapped[List["SentJobAlert"]] = relationship("SentJobAlert", back_populates="user")
+
 
 
 class Feedback(Base):
@@ -47,7 +50,7 @@ class Feedback(Base):
 
 class Partner(Base):
     __tablename__ = "partners"
-    # ... (existing Partner model remains the same, but we add relationships) ...
+    # ... added relationships) ...
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
@@ -84,7 +87,7 @@ class Event(Base):
     partner: Mapped["Partner"] = relationship("Partner", back_populates="events")
 
 
-# --- NEW TABLE FOR THE PARTNER DASHBOARD ---
+# --- PARTNER DASHBOARD ---
 class FeaturedJob(Base):
     __tablename__ = "featured_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -98,3 +101,13 @@ class FeaturedJob(Base):
     partner: Mapped["Partner"] = relationship("Partner", back_populates="featured_jobs")
 
 
+# --- TRACK SENT JOB ALERTS ---
+class SentJobAlert(Base):
+    __tablename__ = "sent_job_alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_phone_number: Mapped[str] = mapped_column(String, ForeignKey("user_sessions.phone_number"), index=True)
+    job_link: Mapped[str] = mapped_column(String, nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["UserSession"] = relationship("UserSession", back_populates="sent_job_alerts")
