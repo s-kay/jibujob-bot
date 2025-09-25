@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, attributes
 from sqlalchemy import inspect
 from app import models
 from app.config import settings
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 
 def get_or_create_session(db: Session, phone_number: str, user_name: str) -> tuple[models.UserSession, bool]:
     """
@@ -54,7 +54,7 @@ def update_session(db: Session, session: models.UserSession):
     # Use SQLAlchemy's inspect utility to get the object's state
     ins = inspect(session)
     
-    # THE FIX IS HERE: We only flag attributes that are actually loaded in the session's state.
+    # flag attributes that are actually loaded in the session's state.
     if 'session_data' in ins.attrs and session.session_data is not None:
         attributes.flag_modified(session, "session_data")
     if 'resume_data' in ins.attrs and session.resume_data is not None:
@@ -88,6 +88,7 @@ def save_feedback(db: Session, user_phone_number: str, feedback_data: dict):
 def get_partner_by_username(db: Session, username: str) -> models.Partner | None:
     """Fetches a partner from the database by their username."""
     return db.query(models.Partner).filter(models.Partner.username == username).first()    
+
 
 # --- CRUD FUNCTIONS FOR THE DASHBOARD ---
 
@@ -150,3 +151,24 @@ def delete_featured_job(db: Session, job_id: int, partner_id: int) -> bool:
         db.commit()
         return True
     return False
+
+# --- THE SMART ALERT SYSTEM ---
+
+def get_sent_job_links_for_user(db: Session, user_phone_number: str) -> Set[str]:
+    """
+    Retrieves a set of all job links that have already been sent to a user.
+    Using a set provides a fast O(1) average time complexity for checking existence.
+    """
+    alerts = db.query(models.SentJobAlert.job_link).filter(models.SentJobAlert.user_phone_number == user_phone_number).all()
+    return {alert[0] for alert in alerts}
+
+def mark_job_as_sent(db: Session, user_phone_number: str, job_link: str):
+    """
+    Records that a specific job alert has been sent to a user.
+    """
+    new_alert = models.SentJobAlert(
+        user_phone_number=user_phone_number,
+        job_link=job_link
+    )
+    db.add(new_alert)
+    # The commit will happen in the main alert script after all users are processed.
