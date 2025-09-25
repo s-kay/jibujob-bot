@@ -199,16 +199,19 @@ async def process_message(db: Session, session: models.UserSession, message_text
         elif state.get("awaiting_analysis_confirmation"):
             selected_job = state.get("selected_job_for_analysis")
             if "yes" in message_text and selected_job:
-                # Analyze CV against job and provide feedback only
+                # THE FIX: Immediately analyze CV against job and provide feedback
                 cv_text = resume_builder.format_cv(session.resume_data)
                 feedback = await ai_client.optimize_resume(cv_text, selected_job.get("description", ""))
                 
                 if feedback:
                     await whatsapp_client.send_whatsapp_message(session.phone_number, feedback)
-                    # THE FIX: Give user options after analysis instead of auto-generating cover letter
+                    # Give user options after analysis
                     state.clear()
                     state["awaiting_post_analysis_action"] = True
                     state["analyzed_job"] = selected_job
+                    # THE FIX: Preserve the job list if it exists (for users who came from job listings)
+                    if "last_job_search_results" in state:
+                        state["last_job_search_results"] = state.get("last_job_search_results", [])
                     reply = "Type 'cl' to generate cover letter or select another listing for analysis or '0' for home."
                     await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
                 else:
@@ -278,7 +281,7 @@ async def process_message(db: Session, session: models.UserSession, message_text
                         await whatsapp_client.send_whatsapp_message(session.phone_number, job_card)
 
                         # THE FIX: Always show this message regardless of CV status
-                        await whatsapp_client.send_whatsapp_message(session.phone_number, "I can match this job to your CV to boost your application. Reply analyze or pick another listing.")
+                        await whatsapp_client.send_whatsapp_message(session.phone_number, "Reply with another number to see a different job, or ask me to `analyze this job` for you.")
                     else:
                         await whatsapp_client.send_whatsapp_message(session.phone_number, "That's not a valid number from the list. Please try again.")
 
@@ -339,7 +342,6 @@ async def process_message(db: Session, session: models.UserSession, message_text
             await whatsapp_client.send_whatsapp_message(session.phone_number, reply)
         
         crud.update_session(db, session)
-        return
 
         # --- CV Builder Flow ---
     elif session.current_menu == "resume_builder":
