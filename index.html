@@ -16,17 +16,14 @@
 <body class="h-full bg-gray-100 flex flex-col items-center justify-center font-sans">
     <div class="w-full max-w-md h-full md:h-[90vh] md:max-h-[700px] bg-white rounded-lg shadow-xl flex flex-col">
         <!-- Header -->
-        <header class="bg-emerald-600 text-white p-4 flex items-center justify-center relative rounded-t-lg">
-            <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-3">
-                <svg class="w-10 h-10 text-emerald-600" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="48" stroke="currentColor" stroke-width="4"/>
-                    <path d="M50 28C37.8497 28 28 37.8497 28 50C28 52.6184 28.4734 55.1271 29.3511 57.4475M70.6489 42.5525C71.5266 44.8729 72 47.3816 72 50C72 62.1503 62.1503 72 50 72C42.2338 72 35.3444 67.7533 31.2223 61.5M50 28V12M50 72V88M29.3511 57.4475L15 63M70.6489 42.5525L85 37M31.2223 61.5L24 76M50 28C50 28 58 42 50 50C42 58 50 72 50 72" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="/static/kazileo-logo.png" alt="KaziLeo Logo" class="h-14 w-18">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">KaziLeo</h1>
+                <p class="text-sm text-gray-500">Your Career Companion</p>
             </div>
-            <div>
-                <h1 class="text-xl font-bold">KaziLeo</h1>
-                <p class="text-sm opacity-80">Your Career Companion</p>
-            </div>
+        </div>
         </header>
         
         <!-- Chat Messages -->
@@ -115,7 +112,7 @@
             });
 
             if (!response.ok) {
-                 addMessage(`Error: Server responded with status ${response.status}`, 'bot');
+                addMessage(`Error: Server responded with status ${response.status}`, 'bot');
             } else {
                 // THE FIX IS HERE: We now process the replies from the server.
                 const data = await response.json();
