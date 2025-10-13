@@ -79,8 +79,8 @@ async def handle_webchat(request: Request, db: Session = Depends(get_db)):
     session, is_new = crud.get_or_create_session(db, phone_number=session_id, user_name="Friend")
     await services.process_message(db, session, user_input, is_new_user=is_new)
     crud.update_session(db, session)
-    
-    replies = whatsapp_client.get_mock_replies()
+
+    replies = whatsapp_client.WEB_REPLIES.get(session_id, [])
     return {"replies": replies}
 
 @app.get("/webhook", tags=["WhatsApp"])
