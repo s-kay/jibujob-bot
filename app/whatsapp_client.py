@@ -16,7 +16,7 @@ async def send_whatsapp_message(to: str, message: str):
     is_mock_user = to.startswith("web-") or to.startswith("cli_")
 
     if is_mock_user:
-        if to.startswith("cli_"):
+        if to.startswith("cli_") or to.startswith("web-"):
             print(f"\nKaziLeo:\n{message}")
         mock_replies.append(message)
         return
